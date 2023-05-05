@@ -1,3 +1,5 @@
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
 module Format where
 import Download
 import Data.List
@@ -5,6 +7,12 @@ import Presets
 
 --color data type
 data Color = Green | Red | Blue
+
+-- Remove punctuation from text String.
+removePunc :: String -> String
+removePunc xs = [x | x <- xs, not (x `elem` ",+?!:;\"\'")]
+
+
 
 --compose Final String together with Special Case
 composeFinal::[String]->IO String
@@ -27,22 +35,22 @@ composeString (x:xs) = do
                             return string 
 
 -- tuple to string 
-tupleToString::Bool->(Color,String,String, String, String)->String
-tupleToString True (Green,t,a, b, c) = a ++ " \x03\&03" ++  b ++ " " ++  c ++ "%\x03"
-tupleToString True (Red,t,a, b, c)   = a ++ " \x03\&04" ++ b ++ " " ++  c ++ "%\x03"
-tupleToString True (Blue,t,a, b, c)  = a ++ " " ++  b ++ " " ++  c ++ "%"
-tupleToString _ (Green,t,a, b, c)    = (presetConvert t)++ " \x03\&03" ++ b ++ " " ++  c ++ "%\x03"
-tupleToString _ (Red,t,a, b, c)      = (presetConvert t) ++ "  \x03\&04" ++ b ++ " " ++  c ++ "%\x03"
-tupleToString _ (Blue,t,a, b, c)     = (presetConvert t) ++ " " ++  b ++ " " ++  c ++ "%"
+tupleToString::Bool->(Color,StockData)->String
+tupleToString True (Green,StockData{..}) = companyName ++ " \x03\&03" ++  price ++ " " ++  percentageChange ++ "%\x03" ++ " Div:" ++ dividend ++ " MarketCap: "++ marketCap
+tupleToString True (Red,StockData{..})   = companyName ++ " \x03\&04" ++ price ++ " " ++  percentageChange ++ "%\x03" ++ " Div:" ++ dividend ++ " MarketCap: "++ marketCap
+tupleToString True (Blue,StockData{..})  = companyName ++ " " ++  price ++ " " ++  percentageChange ++ "%" ++ " Div:" ++ dividend ++ " MarketCap: "++ marketCap
+tupleToString _ (Green,StockData{..})    = (presetConvert ticker)++ " \x03\&03" ++ price ++ " " ++  percentageChange ++ "%\x03"
+tupleToString _ (Red,StockData{..})      = (presetConvert ticker) ++ "  \x03\&04" ++ price ++ " " ++  percentageChange ++ "%\x03"
+tupleToString _ (Blue,StockData{..})     = (presetConvert ticker) ++ " " ++  price ++ " " ++  percentageChange ++ "%"
 
 
 
 
 --add Color
-addColor::(String,String,String,String)->(Color, String, String, String, String)
-addColor (t,a,b,c) |"-" `isInfixOf` c = (Red,t,a,b,c)
-addColor (t,a,b,c) |"+" `isInfixOf` c = (Green,t,a,b,c)
-addColor (t,a,b,c)                    = (Blue,t,a,b,c)
+addColor::StockData->(Color, StockData)
+addColor s@StockData{percentageChange} |"-" `isInfixOf` percentageChange = (Red,s)
+addColor s@StockData{percentageChange} |"+" `isInfixOf` percentageChange = (Green,s)
+addColor s                   = (Blue,s)
 
 
 

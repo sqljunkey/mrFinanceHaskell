@@ -5,6 +5,7 @@ import Download
 import Data.List
 import Format
 import Presets
+import Index
 
 --List of commands
 command :: [String] -> IO String
@@ -14,9 +15,9 @@ command (x:xs) = do
           |  x== "!quote" = do  
                               a <- composeFinal xs
                               return $ "PRIVMSG:" ++ a
-        --  |  x=="!list"   = do
-          --                   a <- compose xs
-
+          |  x=="!list"   = do
+                             a <- presetIndex (xs !! 0)
+                             return $ "PRIVMSG:" ++ a
           | "!" `isPrefixOf` x = do
                                  a <- composeFinal $ presetCommand x 
                                  return $ "PRIVMSG:" ++ a
