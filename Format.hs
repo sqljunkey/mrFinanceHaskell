@@ -19,7 +19,7 @@ composeFinal::[String]->IO String
 composeFinal [] = return ""
 composeFinal (x:xs)|length xs == 0 = do 
                             a <- getTicker x 
-                            let string = ( tupleToString True $ addColor a) 
+                            let string = ( tupleToString True $ formatStockData a) 
                             return string
 composeFinal xs = composeString xs
 
@@ -29,28 +29,47 @@ composeString [] = return ""
 composeString (x:xs) = do 
                             a <- getTicker x 
                             rs<-composeString xs
-                            let string = ( tupleToString False $ addColor a) ++ ", " ++ rs
+                            let string = ( tupleToString False $ formatStockData a) ++ rs
                                          
                            
-                            return string 
+                            return  string 
 
 -- tuple to string 
-tupleToString::Bool->(Color,StockData)->String
-tupleToString True (Green,StockData{..}) = companyName ++ " \x03\&03" ++  price ++ " " ++  percentageChange ++ "%\x03" ++ " Div:" ++ dividend ++ " MarketCap: "++ marketCap
-tupleToString True (Red,StockData{..})   = companyName ++ " \x03\&04" ++ price ++ " " ++  percentageChange ++ "%\x03" ++ " Div:" ++ dividend ++ " MarketCap: "++ marketCap
-tupleToString True (Blue,StockData{..})  = companyName ++ " " ++  price ++ " " ++  percentageChange ++ "%" ++ " Div:" ++ dividend ++ " MarketCap: "++ marketCap
-tupleToString _ (Green,StockData{..})    = (presetConvert ticker)++ " \x03\&03" ++ price ++ " " ++  percentageChange ++ "%\x03"
-tupleToString _ (Red,StockData{..})      = (presetConvert ticker) ++ "  \x03\&04" ++ price ++ " " ++  percentageChange ++ "%\x03"
-tupleToString _ (Blue,StockData{..})     = (presetConvert ticker) ++ " " ++  price ++ " " ++  percentageChange ++ "%"
+tupleToString::Bool->StockData->String
+tupleToString _ StockData{..}| "" == price = ""
+tupleToString True StockData{..}  =  (presetConvert ticker) ++ price ++ percentageChange++companyName ++ dividend ++ marketCap ++ afterHours
+tupleToString _ StockData{..}     = (presetConvert ticker) ++ " " ++  price ++ " " ++  percentageChange ++ ", "
 
 
+--String Identifier and Format
+tagData::Color->String->String->String
+tagData  _ _ "" ="" 
+tagData Green "Price:"  a =" \x03\&03" ++  a ++  "\x03 "
+tagData Red "Price:"  a = " \x03\&04" ++  a ++  "\x03 "
+tagData Blue "Price:"  a = a ++ " "
+tagData Green "Change:"  a = " \x03\&03" ++  a ++  "%\x03 "
+tagData Red "Change:"  a =   " \x03\&04" ++  a ++  "%\x03 "
+tagData Blue "Change:"  a = a ++ "% "
+tagData _ "AfterHours:"  a ="AfterHours: " ++ a ++ "% "
+tagData c a b = a ++" "++ b ++ " "
 
+--helper StockData A
+formatStockData::StockData->StockData
+formatStockData s@StockData{..} = StockData{
+                                          ticker = tagData (addColor s) "" ticker, 
+                                          companyName = tagData (addColor s) "" companyName,
+                                          price = tagData (addColor s) "Price:" price,
+                                          percentageChange = tagData (addColor s) "Change:" percentageChange,
+                                          dividend = tagData (addColor s) "Div:" dividend,
+                                          marketCap = tagData (addColor s) "MarketCap:" marketCap,
+                                          afterHours = tagData (addColor s) "AfterHours:" afterHours}
+ 
 
 --add Color
-addColor::StockData->(Color, StockData)
-addColor s@StockData{percentageChange} |"-" `isInfixOf` percentageChange = (Red,s)
-addColor s@StockData{percentageChange} |"+" `isInfixOf` percentageChange = (Green,s)
-addColor s                   = (Blue,s)
+addColor::StockData->Color
+addColor StockData{..} |"-" `isInfixOf` percentageChange = Red
+addColor StockData{..} |"+" `isInfixOf` percentageChange = Green
+addColor StockData{..}                 = Blue
 
 
 

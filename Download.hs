@@ -49,28 +49,37 @@ data StockData = StockData { companyName :: String
                      } deriving (Show)
 
 
+--convert list to string
+listToString::[[String]]->Int->String
+listToString [] _ = ""
+listToString l d =  if length (l) > 0 && length (l !! 0) > d  
+                    then 
+                        (l !! 0 !! d)
+                    else
+                        ""
+
 --do regex on yahoo web string      
 parseHtml::String ->String->Maybe StockData
 parseHtml a tick = 
-    let priceList = a=~"Currency\\s+in(.+?)((\\d+,)?\\d+\\.\\d+)((-|\\+)?\\d+\\.\\d+)\\s+\\(((-|\\+)?\\d+\\.\\d+)\\%\\)"::[[String]]
-        
-        companyName = a=~"(Frame'\\);}(.*))\\((.*)\\)(.*?)Currency"::[[String]]
-        dividend= a=~"Dividend & Yield(\\d+.\\d+)"::[[String]]
-        marketCap = a=~"Market Cap(\\d+\\.\\d+(B|T|M))"::[[String]]
-        afterHours = a=~"\\(((-|\\+)\\d+.\\d+)%\\)After hours"::[[String]]
-        price =   (priceList !! 0 !! 2)
-        percentage =   (priceList !! 0 !! 6) 
+    let priceList =  a=~"Currency\\s+in(.+?)((\\d+,)?\\d+\\.\\d+)((-|\\+)?\\d+\\.\\d+)\\s+\\(((-|\\+)?\\d+\\.\\d+)\\%\\)"::[[String]]
+        companyName = a=~"(Frame'\\);}(.*?))\\((.*?)\\)(.*?)Currency"::[[String]]
+        dividend=  a=~"Dividend & Yield(\\d+.\\d+)"::[[String]]
+        marketCap =  a=~"Market Cap(\\d+\\.\\d+(B|T|M))"::[[String]]
+        afterHours =   a=~"\\(((-|\\+)\\d+.\\d+)%\\)After hours"::[[String]]
+
+
+   
 
     in  if companyName==[] || priceList== [] then
         Nothing
         else 
-        Just(StockData{companyName =(companyName !! 0 !! 3) , 
+        Just(StockData{ companyName = (listToString companyName  2) , 
                        ticker = tick,
-                       price = price, 
-                       percentageChange = percentage,
-                       dividend= (dividend !! 0 !! 1) , 
-                       marketCap = (marketCap !! 0 !! 1),
-                       afterHours =(afterHours !! 0 !! 1) })
+                       price = (listToString priceList  2), 
+                       percentageChange = (listToString priceList 6),
+                       dividend= (listToString dividend  1) , 
+                       marketCap = (listToString marketCap  1),
+                       afterHours =(listToString afterHours 1) })
 
 
     --(ticker, co name, price, percentage, div  )

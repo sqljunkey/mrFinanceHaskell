@@ -46,7 +46,7 @@ connectTo host port = do
 run :: Net ()
 run = do
     write "NICK" myNick
-    write "USER" (myNick ++ " 0 * :tutorial bot")
+    write "USER" (myNick ++ " 0 * :mr finance")
     write "JOIN" myChan
     listen
 
