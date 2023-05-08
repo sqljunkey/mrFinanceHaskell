@@ -7,25 +7,32 @@ import Text.HTML.TagSoup
 import Text.Regex.PCRE
 import Text.Read
 
+-- Remove punctuation from text String.
+removePuncNR :: String -> String
+removePuncNR xs = [x | x <- xs, not (x `elem` ",+?!:;nr\\\"\'")]
+
+
+
 --give ticker, sheet , term  returns url String
 --ticker
---"balanace, income, cashflow"
---"quarterly, yearly"
---formMarketWatchUrl::String->String->String->String
---formMarketWatchUrl a b c = let link = "https://www.marketwatch.com/investing/stock/" ++ a 
---                                        if b == "balance" 
---                                             link ++ " /financials/balance-sheet/"
- --                                       else if b== "income"
- --                                           link ++ ""
-                                        
+formMWUrl::String->String->String->String
+formMWUrl a "b" "q" = "https://www.marketwatch.com/investing/stock/" ++ a ++ "/financials/balance-sheet/quarter"
+formMWUrl a "i" "q" = "https://www.marketwatch.com/investing/stock/" ++ a ++ "/financials//income/quarter"                                 
+formMWUrl a "c" "q" = "https://www.marketwatch.com/investing/stock/" ++ a ++ "/financials/cash-flow/quarter"
+formMWUrl a "b" _ = "https://www.marketwatch.com/investing/stock/" ++ a ++ "/financials/balance-sheet"
+formMWUrl a "i" _ = "https://www.marketwatch.com/investing/stock/" ++ a ++ "/financials"                                 
+formMWUrl a "c" _ = "https://www.marketwatch.com/investing/stock/" ++ a ++ "/financials/cash-flow"
+
+
+
 
 ---give ticker name and it returns url String
 formYahooFinanceUrl::String->String
 formYahooFinanceUrl a = "https://finance.yahoo.com/quote/" ++ a
 
 --download html 
-downloadHtml :: String-> IO  String
-downloadHtml a = do
+downloadHtml :: String->Int-> IO  String
+downloadHtml a n = do
     request <- parseRequest a 
     let settings = mkManagerSettings (TLSSettingsSimple True False False) Nothing
     manager <- newManager settings
@@ -36,7 +43,7 @@ downloadHtml a = do
     
     return $ show justText 
      
-        where fromFooter =  innerText  .take 2000 . dropWhile (~/= "<body>")
+        where fromFooter =  innerText  .take n . dropWhile (~/= "<body>")
      
 --Stock Data Record
 data StockData = StockData { companyName :: String  
@@ -85,7 +92,7 @@ parseHtml a tick =
     --(ticker, co name, price, percentage, div  )
 getTicker :: String -> IO StockData
 getTicker tick = do
-  str' <- downloadHtml $ formYahooFinanceUrl tick
+  str' <- downloadHtml  (formYahooFinanceUrl tick) 2000
   case parseHtml str' tick of
     Nothing -> pure StockData{companyName ="" , 
                        ticker = tick,
@@ -97,3 +104,27 @@ getTicker tick = do
     Just str'' -> pure str'' -- from g if it exists
 
  
+--(get Rev, Cash,Debt,Asset )
+getSheets::String->String-> IO [[String]]
+getSheets tick quarter= do
+       str1 <- downloadHtml  (formMWUrl tick "b"  quarter) 10000
+       str2 <- downloadHtml  (formMWUrl tick "c"  quarter) 10000
+       str3 <- downloadHtml  (formMWUrl tick "i"  quarter) 10000
+        
+       let test = parseSheetHtml $ removePuncNR ( str1 ++ str2 ++ str3)
+       putStrLn $  test !! 0 !! 0
+       -- putStrLn $ removePuncNR str3
+       return $ test
+
+parseSheetHtml::String->[[String]]
+parseSheetHtml a = 
+                let totalAsset =a =~"(Total\\s+Assets)(\\s+(\\d+.\\d+)(B|M|K))+" ::[[String]]
+                    totalLiabilities = a =~ "(Total\\s+Liabilities)(\\s+(\\d+.\\d+)(B|M|K))+" ::[[String]] 
+                    freeCashflow = a =~ "(Fee\\s+Cash\\s+Flow)(\\s+(\\d+.\\d+)(B|M|K))+" ::[[String]] 
+                    opCashflow  = a =~ "(Net\\s+Opeatig\\s+Cash\\s+Flow)(\\s+(\\d+.\\d+)(B|M|K))+" ::[[String]] 
+                    revenue  = a =~ "(Reveue)(\\s+(\\d+.\\d+)(B|M|K))+" ::[[String]] 
+                    netIncome  = a =~ "(Net\\s+Icome)(\\s+(\\d+.\\d+)(B|M|K))+" ::[[String]] 
+                    interstIncome = a =~ "(Iteest\\s+Icome)(\\s+(\\d+.\\d+)(B|M|K))+" ::[[String]] 
+                    
+               in 
+                netInterstIncome

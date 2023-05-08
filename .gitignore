@@ -7,4 +7,11 @@ Format.o
 Index.hi
 Index.o
 Main
+Main.hi
+Main.o
+Presets.hi
+Test.hi
+Test.o
 Presets.o
+test
+test.o
