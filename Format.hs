@@ -38,7 +38,7 @@ composeString (x:xs) = do
 tupleToString::Bool->StockData->String
 tupleToString _ StockData{..}| "" == price = ""
 tupleToString True StockData{..}  =  (presetConvert ticker) ++ price ++ percentageChange++companyName ++ dividend ++ marketCap ++ afterHours
-tupleToString _ StockData{..}     = (presetConvert ticker) ++ " " ++  price ++ " " ++  percentageChange ++ ", "
+tupleToString _ StockData{..}     = (presetConvert ticker) ++  price ++  percentageChange ++ ", "
 
 
 --String Identifier and Format
@@ -50,19 +50,22 @@ tagData Blue "Price:"  a = a ++ " "
 tagData Green "Change:"  a = " \x03\&03" ++  a ++  "%\x03 "
 tagData Red "Change:"  a =   " \x03\&04" ++  a ++  "%\x03 "
 tagData Blue "Change:"  a = a ++ "% "
-tagData _ "AfterHours:"  a ="AfterHours: " ++ a ++ "% "
+tagData _ "AfterHours:"  a ="After Hour(s): " ++ a ++ "% "
 tagData c a b = a ++" "++ b ++ " "
 
 --helper StockData A
 formatStockData::StockData->StockData
 formatStockData s@StockData{..} = StockData{
-                                          ticker = tagData (addColor s) "" ticker, 
-                                          companyName = tagData (addColor s) "" companyName,
-                                          price = tagData (addColor s) "Price:" price,
-                                          percentageChange = tagData (addColor s) "Change:" percentageChange,
-                                          dividend = tagData (addColor s) "Div:" dividend,
-                                          marketCap = tagData (addColor s) "MarketCap:" marketCap,
-                                          afterHours = tagData (addColor s) "AfterHours:" afterHours}
+                                          ticker = ticker, 
+                                          ,companyName = tagData (addColor s) "" companyName,
+                                          ,price = tagData (addColor s) "Price:" price,
+                                          ,percentageChange = tagData (addColor s) "Change:" percentageChange,
+                                          ,dividend = tagData (addColor s) "Div:" dividend,
+                                          ,marketCap = tagData (addColor s) "Market Cap:" marketCap,
+                                          ,afterHours = tagData (addColor s) "AfterHours:" afterHours
+                                          ,peRatio = tagData (addColor s) "P/E:" peRatio 
+                                          ,weeksChange = tagData (addColor s) "52 Week Change:" weeksChange
+                                          ,beta = tagData (addColor s) "Beta:" weeksChange}
  
 
 --add Color

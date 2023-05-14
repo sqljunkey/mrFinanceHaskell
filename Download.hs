@@ -15,20 +15,23 @@ removePuncNR xs = [x | x <- xs, not (x `elem` ",+?!:;nr\\\"\'")]
 
 --give ticker, sheet , term  returns url String
 --ticker
-formMWUrl::String->String->String->String
-formMWUrl a "b" "q" = "https://www.marketwatch.com/investing/stock/" ++ a ++ "/financials/balance-sheet/quarter"
-formMWUrl a "i" "q" = "https://www.marketwatch.com/investing/stock/" ++ a ++ "/financials//income/quarter"                                 
-formMWUrl a "c" "q" = "https://www.marketwatch.com/investing/stock/" ++ a ++ "/financials/cash-flow/quarter"
-formMWUrl a "b" _ = "https://www.marketwatch.com/investing/stock/" ++ a ++ "/financials/balance-sheet"
-formMWUrl a "i" _ = "https://www.marketwatch.com/investing/stock/" ++ a ++ "/financials"                                 
-formMWUrl a "c" _ = "https://www.marketwatch.com/investing/stock/" ++ a ++ "/financials/cash-flow"
+mwUrl::String->String->String->String
+mwUrl a "b" "q" = "https://www.marketwatch.com/investing/stock/" ++ a ++ "/financials/balance-sheet/quarter"
+mwUrl a "i" "q" = "https://www.marketwatch.com/investing/stock/" ++ a ++ "/financials//income/quarter"                                 
+mwUrl a "c" "q" = "https://www.marketwatch.com/investing/stock/" ++ a ++ "/financials/cash-flow/quarter"
+mwUrl a "b" _ = "https://www.marketwatch.com/investing/stock/" ++ a ++ "/financials/balance-sheet"
+mwUrl a "i" _ = "https://www.marketwatch.com/investing/stock/" ++ a ++ "/financials"                                 
+mwUrl a "c" _ = "https://www.marketwatch.com/investing/stock/" ++ a ++ "/financials/cash-flow"
 
 
 
 
 ---give ticker name and it returns url String
-formYahooFinanceUrl::String->String
-formYahooFinanceUrl a = "https://finance.yahoo.com/quote/" ++ a
+yfUrl::String->String
+yfUrl a = "https://finance.yahoo.com/quote/" ++ a
+
+yfUrlStat::String->String
+yfUrlStat a = "https://finance.yahoo.com/quote/" ++ a ++ "/key-statistics?p="
 
 --download html 
 downloadHtml :: String->Int-> IO  String
@@ -39,7 +42,7 @@ downloadHtml a n = do
     res <- httpLbs request manager
     
     let justText =  (fromFooter  $ parseTags $ show res)
-    --putStrLn $ show justText
+    putStrLn $ show justText
     
     return $ show justText 
      
@@ -53,6 +56,9 @@ data StockData = StockData { companyName :: String
                      , dividend :: String  
                      , marketCap :: String  
                      , afterHours :: String  
+                     , weeksChange :: String
+                     , peRatio::String
+                     , beta :: String
                      } deriving (Show)
 
 
@@ -73,43 +79,51 @@ parseHtml a tick =
         dividend=  a=~"Dividend & Yield(\\d+.\\d+)"::[[String]]
         marketCap =  a=~"Market Cap(\\d+\\.\\d+(B|T|M))"::[[String]]
         afterHours =   a=~"\\(((-|\\+)\\d+.\\d+)%\\)After hours"::[[String]]
-
-
-   
+        peRatio = a=~"PE\\s+Ratio\\s+\\(TTM\\)(\\d+.\\d+)"::[[String]]
+        weeksChange = a=~"52-Week\\s+Change\\s+3(\\d+\\.\\d+)%S"::[[String]]
+        beta        = a=~"Beta\\s+\\(5Y Monthly\\)\\s+(\\d+\\.\\d+)52"::[[String]]
 
     in  if companyName==[] || priceList== [] then
         Nothing
         else 
-        Just(StockData{ companyName = (listToString companyName  2) , 
-                       ticker = tick,
-                       price = (listToString priceList  2), 
-                       percentageChange = (listToString priceList 6),
-                       dividend= (listToString dividend  1) , 
-                       marketCap = (listToString marketCap  1),
-                       afterHours =(listToString afterHours 1) })
+        Just(StockData{ companyName = (listToString companyName  2) 
+                       ,ticker = tick
+                       ,price = (listToString priceList  2)
+                       ,percentageChange = (listToString priceList 6)
+                       ,dividend= (listToString dividend  1) 
+                       ,marketCap = (listToString marketCap  1)
+                       ,afterHours =(listToString afterHours 1)
+                       ,peRatio =(listToString peRatio 1) 
+                       ,weeksChange = (listToString weeksChange 1)
+                       ,beta =(listToString beta 1)
+                        })
 
 
     --(ticker, co name, price, percentage, div  )
 getTicker :: String -> IO StockData
 getTicker tick = do
-  str' <- downloadHtml  (formYahooFinanceUrl tick) 2000
+  str' <- downloadHtml  (yfUrl tick) 2000
+  str1' <- downloadHtml  (yfUrlStat tick) 2000
   case parseHtml str' tick of
-    Nothing -> pure StockData{companyName ="" , 
-                       ticker = tick,
-                       price = "", 
-                       percentageChange = "",
-                       dividend= "" , 
-                       marketCap = "",
-                       afterHours ="" }-- from f
+    Nothing -> pure StockData{companyName ="" 
+                       ,ticker = tick
+                       ,price = ""
+                       ,percentageChange = ""
+                       ,dividend= ""  
+                       ,marketCap = ""
+                       ,peRatio =""
+                       ,afterHours ="" 
+                       ,weeksChange=""
+                       ,beta=""}-- from f
     Just str'' -> pure str'' -- from g if it exists
 
  
 --(get Rev, Cash,Debt,Asset )
 getSheets::String->String-> IO [[String]]
 getSheets tick quarter= do
-       str1 <- downloadHtml  (formMWUrl tick "b"  quarter) 10000
-       str2 <- downloadHtml  (formMWUrl tick "c"  quarter) 10000
-       str3 <- downloadHtml  (formMWUrl tick "i"  quarter) 10000
+       str1 <- downloadHtml  (mwUrl tick "b"  quarter) 10000
+       str2 <- downloadHtml  (mwUrl tick "c"  quarter) 10000
+       str3 <- downloadHtml  (mwUrl tick "i"  quarter) 10000
         
        let test = parseSheetHtml $ removePuncNR ( str1 ++ str2 ++ str3)
        putStrLn $  test !! 0 !! 0
@@ -127,4 +141,4 @@ parseSheetHtml a =
                     interstIncome = a =~ "(Iteest\\s+Icome)(\\s+(\\d+.\\d+)(B|M|K))+" ::[[String]] 
                     
                in 
-                netInterstIncome
+                interstIncome ++ freeCashflow
