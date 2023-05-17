@@ -17,8 +17,9 @@ removePunc xs = [x | x <- xs, not (x `elem` ",+?!:;\"\'")]
 --compose Final String together with Special Case
 composeFinal::[String]->IO String
 composeFinal [] = return ""
+composeFinal (x:xs)| length (removePunc x) == 0 =return ""
 composeFinal (x:xs)|length xs == 0 = do 
-                            a <- getTicker x 
+                            a <- getTickerStat x 
                             let string = ( tupleToString True $ formatStockData a) 
                             return string
 composeFinal xs = composeString xs
@@ -37,8 +38,20 @@ composeString (x:xs) = do
 -- tuple to string 
 tupleToString::Bool->StockData->String
 tupleToString _ StockData{..}| "" == price = ""
-tupleToString True StockData{..}  =  (presetConvert ticker) ++ price ++ percentageChange++companyName ++ dividend ++ marketCap ++ afterHours
-tupleToString _ StockData{..}     = (presetConvert ticker) ++  price ++  percentageChange ++ ", "
+tupleToString True StockData{..}  =  ticker 
+                                    ++ price 
+                                    ++ percentageChange
+                                    ++ companyName 
+                                    ++ dividend 
+                                    ++ peRatio 
+                                    ++ afterHours 
+                                    ++ marketCap
+                                    ++ weeksChange 
+                                    ++ beta
+tupleToString _ StockData{..}     = ticker 
+                                    ++  price 
+                                    ++  percentageChange 
+                                    ++ ", "
 
 
 --String Identifier and Format
@@ -51,21 +64,22 @@ tagData Green "Change:"  a = " \x03\&03" ++  a ++  "%\x03 "
 tagData Red "Change:"  a =   " \x03\&04" ++  a ++  "%\x03 "
 tagData Blue "Change:"  a = a ++ "% "
 tagData _ "AfterHours:"  a ="After Hour(s): " ++ a ++ "% "
+tagData _ "52 Week Change:"  a ="52 Week Change: " ++ a ++ "% "
 tagData c a b = a ++" "++ b ++ " "
 
 --helper StockData A
 formatStockData::StockData->StockData
 formatStockData s@StockData{..} = StockData{
-                                          ticker = ticker, 
-                                          ,companyName = tagData (addColor s) "" companyName,
-                                          ,price = tagData (addColor s) "Price:" price,
-                                          ,percentageChange = tagData (addColor s) "Change:" percentageChange,
-                                          ,dividend = tagData (addColor s) "Div:" dividend,
-                                          ,marketCap = tagData (addColor s) "Market Cap:" marketCap,
+                                          ticker = ((presetConvert ticker) ++":")
+                                          ,companyName = tagData (addColor s) "" companyName
+                                          ,price = tagData (addColor s) "Price:" price
+                                          ,percentageChange = tagData (addColor s) "Change:" percentageChange
+                                          ,dividend = tagData (addColor s) "Div:" dividend
+                                          ,marketCap = tagData (addColor s) "Market Cap:" marketCap
                                           ,afterHours = tagData (addColor s) "AfterHours:" afterHours
                                           ,peRatio = tagData (addColor s) "P/E:" peRatio 
                                           ,weeksChange = tagData (addColor s) "52 Week Change:" weeksChange
-                                          ,beta = tagData (addColor s) "Beta:" weeksChange}
+                                          ,beta = tagData (addColor s) "Beta:" beta}
  
 
 --add Color

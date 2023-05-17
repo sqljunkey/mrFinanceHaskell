@@ -10,6 +10,7 @@ import System.IO                      --
 import qualified Network.Socket as N  -- network
 import Control.Monad.Trans.Reader     -- transformers
 import Command
+import Data.Foldable
 
 -- Configuration options
 myServer = "irc.libera.chat" :: String
@@ -65,7 +66,7 @@ listen = forever $ do
     line <- liftIO $ hGetLine h
     liftIO (putStrLn line)
     let s = init line
-    if isPing s then pong s else eval  (command ( splitOn " " (clean s)))
+    if isPing s then pong s else evalList  (command ( splitOn " " (clean s)))
   where
     forever :: Net () -> Net ()
     forever a = do a; forever a
@@ -79,16 +80,19 @@ listen = forever $ do
     pong :: String -> Net ()
     pong x = write "PONG" (':' : drop 6 x)
 
-eval :: IO String -> Net ()
+eval :: String -> Net ()
 eval a = do
-  s<- liftIO a
-  let action | s == "!quit" = write "QUIT" ":Exiting" >> liftIO exitSuccess
-             | "PRIVMSG:" `isPrefixOf` s =privmsg (drop 8 s)
+--  s <-liftIO a
+  
+  let action | a == "!quit" = write "QUIT" ":Exiting" >> liftIO exitSuccess
+             | "PRIVMSG:" `isPrefixOf` a =privmsg (drop 8 a)
              | otherwise = return ()
   action
 
-
-
+evalList::IO [String]->Net()
+evalList a = do 
+  s <-liftIO a
+  traverse_ eval s
   
 -- Send a privmsg to the current chan + server
 privmsg :: String -> Net ()

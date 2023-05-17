@@ -6,7 +6,8 @@ import Network.HTTP.Conduit
 import Text.HTML.TagSoup
 import Text.Regex.PCRE
 import Text.Read
-
+import Data.List.Utils
+import Data.List
 -- Remove punctuation from text String.
 removePuncNR :: String -> String
 removePuncNR xs = [x | x <- xs, not (x `elem` ",+?!:;nr\\\"\'")]
@@ -42,7 +43,7 @@ downloadHtml a n = do
     res <- httpLbs request manager
     
     let justText =  (fromFooter  $ parseTags $ show res)
-    putStrLn $ show justText
+    --putStrLn $ show justText
     
     return $ show justText 
      
@@ -76,7 +77,7 @@ parseHtml::String ->String->Maybe StockData
 parseHtml a tick = 
     let priceList =  a=~"Currency\\s+in(.+?)((\\d+,)?\\d+\\.\\d+)((-|\\+)?\\d+\\.\\d+)\\s+\\(((-|\\+)?\\d+\\.\\d+)\\%\\)"::[[String]]
         companyName = a=~"(Frame'\\);}(.*?))\\((.*?)\\)(.*?)Currency"::[[String]]
-        dividend=  a=~"Dividend & Yield(\\d+.\\d+)"::[[String]]
+        dividend=  a=~"Dividend & Yield\\d+.\\d+\\s+\\((\\d+.\\d+%)\\)"::[[String]]
         marketCap =  a=~"Market Cap(\\d+\\.\\d+(B|T|M))"::[[String]]
         afterHours =   a=~"\\(((-|\\+)\\d+.\\d+)%\\)After hours"::[[String]]
         peRatio = a=~"PE\\s+Ratio\\s+\\(TTM\\)(\\d+.\\d+)"::[[String]]
@@ -99,11 +100,13 @@ parseHtml a tick =
                         })
 
 
-    --(ticker, co name, price, percentage, div  )
+    --get ticker with simple information
 getTicker :: String -> IO StockData
-getTicker tick = do
+getTicker tick  = do
   str' <- downloadHtml  (yfUrl tick) 2000
   str1' <- downloadHtml  (yfUrlStat tick) 2000
+
+
   case parseHtml str' tick of
     Nothing -> pure StockData{companyName ="" 
                        ,ticker = tick
@@ -117,28 +120,75 @@ getTicker tick = do
                        ,beta=""}-- from f
     Just str'' -> pure str'' -- from g if it exists
 
+    --get ticker with extended information 
+getTickerStat :: String -> IO StockData
+getTickerStat tick  = do
+  str' <- downloadHtml  (yfUrl tick) 2000
+  str1' <- downloadHtml  (yfUrlStat tick) 2000
+
+
+  case parseHtml (str'++str1') tick of
+    Nothing -> pure StockData{companyName ="" 
+                       ,ticker = tick
+                       ,price = ""
+                       ,percentageChange = ""
+                       ,dividend= ""  
+                       ,marketCap = ""
+                       ,peRatio =""
+                       ,afterHours ="" 
+                       ,weeksChange=""
+                       ,beta=""}-- from f
+    Just str'' -> pure str'' -- from g if it exists
+
+--Reduce Spaces
+formatSpace :: String -> String
+formatSpace = foldr go ""
+  where
+    go x acc = x:if x == ' ' then dropWhile (' ' ==) acc else acc
+
  
 --(get Rev, Cash,Debt,Asset )
-getSheets::String->String-> IO [[String]]
+getSheets::String->String-> IO [String]
 getSheets tick quarter= do
        str1 <- downloadHtml  (mwUrl tick "b"  quarter) 10000
        str2 <- downloadHtml  (mwUrl tick "c"  quarter) 10000
        str3 <- downloadHtml  (mwUrl tick "i"  quarter) 10000
         
        let test = parseSheetHtml $ removePuncNR ( str1 ++ str2 ++ str3)
-       putStrLn $  test !! 0 !! 0
-       -- putStrLn $ removePuncNR str3
-       return $ test
+       
+      
+       return $ replaceStuffs $ flattenSheet test
 
+
+--Parse balance sheet data
 parseSheetHtml::String->[[String]]
 parseSheetHtml a = 
-                let totalAsset =a =~"(Total\\s+Assets)(\\s+(\\d+.\\d+)(B|M|K))+" ::[[String]]
-                    totalLiabilities = a =~ "(Total\\s+Liabilities)(\\s+(\\d+.\\d+)(B|M|K))+" ::[[String]] 
-                    freeCashflow = a =~ "(Fee\\s+Cash\\s+Flow)(\\s+(\\d+.\\d+)(B|M|K))+" ::[[String]] 
-                    opCashflow  = a =~ "(Net\\s+Opeatig\\s+Cash\\s+Flow)(\\s+(\\d+.\\d+)(B|M|K))+" ::[[String]] 
-                    revenue  = a =~ "(Reveue)(\\s+(\\d+.\\d+)(B|M|K))+" ::[[String]] 
-                    netIncome  = a =~ "(Net\\s+Icome)(\\s+(\\d+.\\d+)(B|M|K))+" ::[[String]] 
-                    interstIncome = a =~ "(Iteest\\s+Icome)(\\s+(\\d+.\\d+)(B|M|K))+" ::[[String]] 
+                let totalAsset =a =~"(Total\\s+Assets)(\\s+(\\d+.\\d+)(T|B|M|K))+" ::[[String]]
+                    totalLiabilities = a =~ "(Total\\s+Liabilities)(\\s+(\\d+.\\d+)(T|B|M|K))+" ::[[String]] 
+                    freeCashflow = a =~ "(Fee\\s+Cash\\s+Flow)(\\s+(\\d+.\\d+)(T|B|M|K))+" ::[[String]] 
+                    opCashflow  = a =~ "(Net\\s+Opeatig\\s+Cash\\s+Flow)(\\s+(\\d+.\\d+)(T|B|M|K))+" ::[[String]] 
+                    revenue  = a =~ "(Reveue)(\\s+(\\d+.\\d+)(T|B|M|K))+" ::[[String]] 
+                    netIncome  = a =~ "(Net\\s+Icome)(\\s+(\\d+.\\d+)(T|B|M|K))+" ::[[String]] 
+                    interstIncome = a =~ "(Iteest\\s+Icome)(\\s+(\\d+.\\d+)(T|B|M|K))+" ::[[String]] 
                     
                in 
-                interstIncome ++ freeCashflow
+                 [interstIncome !! 0 ]
+                ++ revenue
+                ++ [netIncome !! 0]
+                ++ opCashflow 
+                ++ freeCashflow 
+                ++totalAsset 
+                ++ totalLiabilities 
+                
+flattenSheet::[[String]]->[String]
+flattenSheet [] = []
+flattenSheet (x:xs) =    [formatSpace $ x !! 0] ++  flattenSheet xs
+                                    
+replaceStuffs::[String]->[String]
+replaceStuffs [] = []
+replaceStuffs (x:xs)| "Iteest Icome" `isInfixOf` x = [replace "Iteest Icome" "PRIVMSG:Interest Income" x] ++ replaceStuffs xs 
+replaceStuffs (x:xs)| "Reveue" `isInfixOf` x = [replace "Reveue" "PRIVMSG:Revenue" x] ++ replaceStuffs xs   
+replaceStuffs (x:xs)| "Net Opeatig Cash Flow" `isInfixOf` x = [replace "Net Opeatig Cash Flow" "PRIVMSG:Net Operatig Cash Flow" x] ++ replaceStuffs xs          
+replaceStuffs (x:xs)| "Fee Cash Flow" `isInfixOf` x = [replace "Fee Cash Flow" "PRIVMSG:Free Cash Flow" x] ++ replaceStuffs xs
+replaceStuffs (x:xs)| "Net Icome" `isInfixOf` x = [replace "Net Icome" "PRIVMSG:Net Income" x] ++ replaceStuffs xs
+replaceStuffs (x:xs) = [("PRIVMSG:"++x)] ++ replaceStuffs xs
