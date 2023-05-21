@@ -148,8 +148,8 @@ formatSpace = foldr go ""
 
  
 --(get Rev, Cash,Debt,Asset )
-getSheets::String->String-> IO [String]
-getSheets tick quarter= do
+getSheets::String->String->String-> IO [String]
+getSheets c tick quarter= do
        str1 <- downloadHtml  (mwUrl tick "b"  quarter) 10000
        str2 <- downloadHtml  (mwUrl tick "c"  quarter) 10000
        str3 <- downloadHtml  (mwUrl tick "i"  quarter) 10000
@@ -157,7 +157,7 @@ getSheets tick quarter= do
        let test = parseSheetHtml $ removePuncNR ( str1 ++ str2 ++ str3)
        
       
-       return $ replaceStuffs $ flattenSheet test
+       return $ replaceStuffs c $ flattenSheet test
 
 
 --Parse balance sheet data
@@ -184,11 +184,11 @@ flattenSheet::[[String]]->[String]
 flattenSheet [] = []
 flattenSheet (x:xs) =    [formatSpace $ x !! 0] ++  flattenSheet xs
                                     
-replaceStuffs::[String]->[String]
-replaceStuffs [] = []
-replaceStuffs (x:xs)| "Iteest Icome" `isInfixOf` x = [replace "Iteest Icome" "PRIVMSG:Interest Income" x] ++ replaceStuffs xs 
-replaceStuffs (x:xs)| "Reveue" `isInfixOf` x = [replace "Reveue" "PRIVMSG:Revenue" x] ++ replaceStuffs xs   
-replaceStuffs (x:xs)| "Net Opeatig Cash Flow" `isInfixOf` x = [replace "Net Opeatig Cash Flow" "PRIVMSG:Net Operatig Cash Flow" x] ++ replaceStuffs xs          
-replaceStuffs (x:xs)| "Fee Cash Flow" `isInfixOf` x = [replace "Fee Cash Flow" "PRIVMSG:Free Cash Flow" x] ++ replaceStuffs xs
-replaceStuffs (x:xs)| "Net Icome" `isInfixOf` x = [replace "Net Icome" "PRIVMSG:Net Income" x] ++ replaceStuffs xs
-replaceStuffs (x:xs) = [("PRIVMSG:"++x)] ++ replaceStuffs xs
+replaceStuffs::String->[String]->[String]
+replaceStuffs c [] = []
+replaceStuffs c (x:xs)| "Iteest Icome" `isInfixOf` x = [replace "Iteest Icome" ("PRIVMSG:"++c++" :Interest Income") x] ++ replaceStuffs c xs 
+replaceStuffs c (x:xs)| "Reveue" `isInfixOf` x = [replace "Reveue" ("PRIVMSG:"++c++" :Revenue") x] ++ replaceStuffs c xs   
+replaceStuffs c (x:xs)| "Net Opeatig Cash Flow" `isInfixOf` x = [replace "Net Opeatig Cash Flow" ("PRIVMSG:"++c++" :Net Operatig Cash Flow") x] ++ replaceStuffs c xs          
+replaceStuffs c (x:xs)| "Fee Cash Flow" `isInfixOf` x = [replace "Fee Cash Flow" ("PRIVMSG:"++c++" :Free Cash Flow") x] ++ replaceStuffs c xs
+replaceStuffs c (x:xs)| "Net Icome" `isInfixOf` x = [replace "Net Icome" ("PRIVMSG:"++c++" :Net Income") x] ++ replaceStuffs c xs
+replaceStuffs c (x:xs) = [("PRIVMSG:"++c++" :"++x)] ++ replaceStuffs c xs

@@ -1,8 +1,10 @@
 -- File 4.hs
 module Test where 
-  
+
+import Text.Regex.PCRE
 import Control.Exception              -- base
 import Control.Monad.IO.Class         --
+import Control.Lens
 import Data.List                      --
 import Data.List.Split
 import System.Exit                    --
@@ -48,7 +50,9 @@ run :: Net ()
 run = do
     write "NICK" myNick
     write "USER" (myNick ++ " 0 * :mr finance")
-    write "JOIN" myChan
+    write "JOIN" "##investments"
+    write "JOIN" "##econometrics"
+    write "JOIN" "#bitcoin-pricetalk"
     listen
 
 -- Send a message to the server we're currently connected to
@@ -66,7 +70,9 @@ listen = forever $ do
     line <- liftIO $ hGetLine h
     liftIO (putStrLn line)
     let s = init line
-    if isPing s then pong s else evalList  (command ( splitOn " " (clean s)))
+    let c = getChannel s
+    liftIO (putStrLn $show c)
+    if isPing s then pong s else evalList (command c ( splitOn " " (clean s)))
   where
     forever :: Net () -> Net ()
     forever a = do a; forever a
@@ -81,11 +87,11 @@ listen = forever $ do
     pong x = write "PONG" (':' : drop 6 x)
 
 eval :: String -> Net ()
-eval a = do
+eval  a = do
 --  s <-liftIO a
   
   let action | a == "!quit" = write "QUIT" ":Exiting" >> liftIO exitSuccess
-             | "PRIVMSG:" `isPrefixOf` a =privmsg (drop 8 a)
+             | "PRIVMSG:" `isPrefixOf` a =write "PRIVMSG"  (drop 8 a)
              | otherwise = return ()
   action
 
@@ -95,5 +101,15 @@ evalList a = do
   traverse_ eval s
   
 -- Send a privmsg to the current chan + server
-privmsg :: String -> Net ()
+privmsg ::  String -> Net ()
 privmsg msg = write "PRIVMSG" (myChan ++ " :" ++ msg)
+
+--Return Channel name
+getChannel::String-> String
+getChannel s = let a = s =~"PRIVMSG\\s+(.+)\\s+:" ::[[String]] 
+                in getSafely (a ^? element 0 )
+
+--Extract Contents Safely
+getSafely::Maybe [String] -> String
+getSafely (Just xs) = (xs !! 1)
+getSafely (Nothing) = ""
