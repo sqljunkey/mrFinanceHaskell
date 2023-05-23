@@ -71,7 +71,7 @@ listen = forever $ do
     liftIO (putStrLn line)
     let s = init line
     let c = getChannel s
-    liftIO (putStrLn $show c)
+    
     if isPing s then pong s else evalList (command c ( splitOn " " (clean s)))
   where
     forever :: Net () -> Net ()
