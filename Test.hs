@@ -52,6 +52,7 @@ run = do
     write "USER" (myNick ++ " 0 * :mr finance")
     write "JOIN" "##investments"
     write "JOIN" "##econometrics"
+    write "JOIN" "#materia"
     write "JOIN" "#bitcoin-pricetalk"
     listen
 

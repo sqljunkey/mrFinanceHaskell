@@ -7,12 +7,20 @@ import Presets
 
 --color data type
 data Color = Green | Red | Blue
+data Issue = Crypto | LongS| ShortS
 
 -- Remove punctuation from text String.
 removePunc :: String -> String
 removePunc xs = [x | x <- xs, not (x `elem` ",+?!:;\"\'")]
 
-
+--compose Crypto
+composeCrypto::[String]->IO String
+composeCrypto [] = return ""
+composeCrypto (x:xs) = do 
+                        a <-getCrypto x
+                        rs<-composeCrypto xs
+                        let string =  ( tupleToString Crypto $ formatStockData a) ++ rs
+                        return string
 
 --compose Final String together with Special Case
 composeFinal::[String]->IO String
@@ -20,7 +28,7 @@ composeFinal [] = return ""
 composeFinal (x:xs)| length (removePunc x) == 0 =return ""
 composeFinal (x:xs)|length xs == 0 = do 
                             a <- getTickerStat x 
-                            let string = ( tupleToString True $ formatStockData a) 
+                            let string = ( tupleToString LongS $ formatStockData a) 
                             return string
 composeFinal xs = composeString xs
 
@@ -30,15 +38,14 @@ composeString [] = return ""
 composeString (x:xs) = do 
                             a <- getTicker x 
                             rs<-composeString xs
-                            let string = ( tupleToString False $ formatStockData a) ++ rs
+                            let string = ( tupleToString ShortS $ formatStockData a) ++ rs
                                          
-                           
                             return  string 
 
 -- tuple to string 
-tupleToString::Bool->StockData->String
+tupleToString::Issue->StockData->String
 tupleToString _ StockData{..}| "" == price = ""
-tupleToString True StockData{..}  =  ticker 
+tupleToString LongS StockData{..}  =  ticker 
                                     ++ price 
                                     ++ percentageChange
                                     ++ companyName 
@@ -48,11 +55,14 @@ tupleToString True StockData{..}  =  ticker
                                     ++ marketCap
                                     ++ weeksChange 
                                     ++ beta
-tupleToString _ StockData{..}     = ticker 
+tupleToString ShortS StockData{..}     = ticker 
                                     ++  price 
                                     ++  percentageChange 
                                     ++ ", "
-
+tupleToString Crypto StockData{..}     = companyName 
+                                    ++  price 
+                                    ++  percentageChange 
+                                    ++ ", "
 
 --String Identifier and Format
 tagData::Color->String->String->String
