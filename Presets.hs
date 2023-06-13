@@ -2,17 +2,17 @@ module Presets where
 
 --presetCommand
 presetCommand:: String ->[String]
-presetCommand "!bond"   = ["2YY=F","10Y=F", "30Y=F"]
-presetCommand "!market" =[ "^DJI", "^GSPC", "^RUT", "^IXIC", "^VIX"]
-presetCommand "!grain"  =[ "ZC=F", "ZS=F", "ZO=F", "ZR=F"]
-presetCommand "!metal"  =["GC=F", "SI=F", "PL=F", "HG=F", "PA=F", "ALI=F", "HRC=F"]
-presetCommand "!fx"     =["GBPUSD=X", "JPY=X", "EURUSD=X", "USDCNY", "CAD=X", "MXN=X", "GC=F", "BTC-USD"]
-presetCommand "!oil"    =["CL=F", "BZ=F", "NG=F", "RB=F"]
-presetCommand "!crypto" =["BTC-USD","ETH-USD","DOGE-USD"]
-presetCommand "!asia"   =["^N225", "^HSI","^STI" , "^AXJO"]
-presetCommand "!vol"    =["^VIX", "^VIX9D", "^VIX3M", "^VIX6M"]
-presetCommand "!soft"   =["CC=F", "KC=F", "OJ=F" , "SB=F"]
-presetCommand "!futures" =[ "ES=F", "NQ=F", "YM=F", "RTY=F"]
+presetCommand ".bond"   = ["2YY=F","10Y=F", "30Y=F"]
+presetCommand ".market" =[ "^DJI", "^GSPC", "^RUT", "^IXIC", "^VIX"]
+presetCommand ".grain"  =[ "ZC=F", "ZS=F", "ZO=F", "ZR=F"]
+presetCommand ".metal"  =["GC=F", "SI=F", "PL=F", "HG=F", "PA=F", "ALI=F", "HRC=F"]
+presetCommand ".fx"     =["GBPUSD=X", "JPY=X", "EURUSD=X", "USDCNY", "CAD=X", "MXN=X", "GC=F", "BTC-USD"]
+presetCommand ".oil"    =["CL=F", "BZ=F", "NG=F", "RB=F"]
+presetCommand ".crypto" =["BTC-USD","ETH-USD","DOGE-USD"]
+presetCommand ".asia"   =["^N225", "^HSI","^STI" , "^AXJO"]
+presetCommand ".vol"    =["^VIX", "^VIX9D", "^VIX3M", "^VIX6M"]
+presetCommand ".soft"   =["CC=F", "KC=F", "OJ=F" , "SB=F"]
+presetCommand ".futures" =[ "ES=F", "NQ=F", "YM=F", "RTY=F"]
 presetCommand _         = []
 
 --conversion nicknames

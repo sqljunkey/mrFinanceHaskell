@@ -11,21 +11,21 @@ import Control.Lens
 command :: String->[String] -> IO [String]
 command c (x:xs) = do
     let action
-          |  x== "!quit"  =  return ["!quit"]
-          |  x== "!quote" || x== "!q" = do  
+          |  x== ".quit"  =  return ["!quit"]
+          |  x== ".quote" || x== ".q"  = do  
                               a <- composeFinal xs
                               return $ ["PRIVMSG:" ++ c ++ " :" ++ (take ((length a)-2) a)]
 
-          |  x== "!crypto" || x== "!c" = do  
+          |  x== ".crypto" || x== ".c"  = do  
                               a <- composeCrypto xs
                               return $ ["PRIVMSG:" ++ c ++ " :" ++ (take ((length a)-2) a)]
            
-          |  x=="!list"   = do
+          |  x==".list"   = do
                              a <- presetIndex (xs !! 0)
                              return $ ["PRIVMSG:" ++ c ++ " :" ++ a]
-          |  x=="!f"      = 
+          |  x==".f"      = 
                             getSheets c (xs !! 0) "n"
-          | "!" `isPrefixOf` x = do
+          | "." `isPrefixOf` x = do
                                   a <- composeFinal $ presetCommand x 
                                   return $ ["PRIVMSG:" ++ c ++ " :" ++ (take ((length a)-2) a)]
           |otherwise = return [""]  -- ignore everything else

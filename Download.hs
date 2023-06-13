@@ -105,7 +105,7 @@ marketList = "(Nasdaq|SNP|NYSE"
 parseHtml::String ->String->Maybe StockData
 parseHtml a tick = 
     let priceList =  a=~"Currency in (USD|USX|JPY|HKD|SGD|AUD)((\\d+,)*?\\d+.\\d+)((-|\\+)(\\d+,)?\\d+.\\d+)\\s+\\(((-|\\+)\\d+.\\d+)%\\)"::[[String]]
-        companyName = a=~((processTicker tick)++"(.*?)"++marketList++".*?Currency")::[[String]]
+        companyName = a=~((processTicker tick)++"\\s+-\\s+(.*?)"++marketList++".*?Currency")::[[String]]
         dividend=  a=~"Dividend & Yield\\d+.\\d+\\s+\\((\\d+.\\d+%)\\)"::[[String]]
         marketCap =  a=~"Market Cap(\\d+\\.\\d+(B|T|M))"::[[String]]
         afterHours =   a=~"\\(((-|\\+)\\d+.\\d+)%\\)After hours"::[[String]]
@@ -189,16 +189,19 @@ getSheets c tick quarter= do
        return $ replaceStuffs c $ flattenSheet test
 
 
+columnParse::String
+columnParse = "\\s+(\\s+\\(?(\\d+.\\d+)|(\\d)?(T|B|M|K)\\)?)+"
+
 --Parse balance sheet data
 parseSheetHtml::String->[[String]]
 parseSheetHtml a = 
-                let totalAsset =a =~"(Total\\s+Assets)(\\(?\\s+(\\d+.\\d+)(T|B|M|K)\\)?)+" ::[[String]]
-                    totalLiabilities = a =~ "(Total\\s+Liabilities)(\\s+\\(?(\\d+.\\d+)(T|B|M|K)\\)?)+" ::[[String]] 
-                    freeCashflow = a =~ "(Fee\\s+Cash\\s+Flow)(\\s+\\(?(\\d+.\\d+)(T|B|M|K)\\)?)+" ::[[String]] 
-                    opCashflow  = a =~ "(Net\\s+Opeatig\\s+Cash\\s+Flow)(\\s+\\(?(\\d+.\\d+)(T|B|M|K)\\)?)+" ::[[String]] 
-                    revenue  = a =~ "(Reveue)\\s+(\\s+\\(?(\\d+.\\d+)|(\\d)?(T|B|M|K)\\)?)+" ::[[String]] 
-                    netIncome  = a =~ "(Net\\s+Icome)(\\s+\\(?(\\d+.\\d+)(T|B|M|K)\\)?)+" ::[[String]] 
-                    interstIncome = a =~ "(Iteest\\s+Icome)(\\s+\\(?(\\d+.\\d+)(T|B|M|K)\\)?)+" ::[[String]] 
+                let totalAsset =a =~("(Total\\s+Assets)" ++ columnParse) ::[[String]]
+                    totalLiabilities = a =~ ("(Total\\s+Liabilities)"++columnParse) ::[[String]] 
+                    freeCashflow = a =~ ("(Fee\\s+Cash\\s+Flow)"++columnParse) ::[[String]] 
+                    opCashflow  = a =~ ("(Net\\s+Opeatig\\s+Cash\\s+Flow)"++columnParse) ::[[String]] 
+                    revenue  = a =~ ("(Reveue)"++columnParse) ::[[String]] 
+                    netIncome  = a =~ ("(Net\\s+Icome)"++columnParse) ::[[String]] 
+                    interstIncome = a =~ ("(Iteest\\s+Icome)"++columnParse) ::[[String]] 
                     
                in 
                   revenue
