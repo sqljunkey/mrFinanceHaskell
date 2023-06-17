@@ -20,11 +20,15 @@ command c (x:xs) = do
                               a <- composeCrypto xs
                               return $ ["PRIVMSG:" ++ c ++ " :" ++ (take ((length a)-2) a)]
            
-          |  x==".list"   = do
+          |  x==".list" || x== ".l"   = do
                              a <- presetIndex (xs !! 0)
                              return $ ["PRIVMSG:" ++ c ++ " :" ++ a]
           |  x==".f"      = 
                             getSheets c (xs !! 0) "n"
+          |  x==".type" || x==".t" = do 
+                                    a <- getType (xs !! 0)
+                                    return $ ["PRIVMSG:" ++ c ++ " :" ++ a]
+
           | "." `isPrefixOf` x = do
                                   a <- composeFinal $ presetCommand x 
                                   return $ ["PRIVMSG:" ++ c ++ " :" ++ (take ((length a)-2) a)]

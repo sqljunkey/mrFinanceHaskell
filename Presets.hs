@@ -7,9 +7,10 @@ presetCommand ".market" =[ "^DJI", "^GSPC", "^RUT", "^IXIC", "^VIX"]
 presetCommand ".grain"  =[ "ZC=F", "ZS=F", "ZO=F", "ZR=F"]
 presetCommand ".metal"  =["GC=F", "SI=F", "PL=F", "HG=F", "PA=F", "ALI=F", "HRC=F"]
 presetCommand ".fx"     =["GBPUSD=X", "JPY=X", "EURUSD=X", "USDCNY", "CAD=X", "MXN=X", "GC=F", "BTC-USD"]
+presetCommand ".currency"=["GBPUSD=X", "JPY=X", "EURUSD=X", "USDCNY", "CAD=X", "MXN=X", "GC=F", "BTC-USD"]
 presetCommand ".oil"    =["CL=F", "BZ=F", "NG=F", "RB=F"]
 presetCommand ".crypto" =["BTC-USD","ETH-USD","DOGE-USD"]
-presetCommand ".asia"   =["^N225", "^HSI","^STI" , "^AXJO"]
+presetCommand ".asia"   =["^N225", "^HSI","^KS11" , "^AXJO"]
 presetCommand ".vol"    =["^VIX", "^VIX9D", "^VIX3M", "^VIX6M"]
 presetCommand ".soft"   =["CC=F", "KC=F", "OJ=F" , "SB=F"]
 presetCommand ".futures" =[ "ES=F", "NQ=F", "YM=F", "RTY=F"]
@@ -22,8 +23,8 @@ presetConvert "RTY=F" = "Russel 2000"
 presetConvert "YM=F" = "Mini-Dow"
 presetConvert "NQ=F" = "Nasdaq 100"
 presetConvert "^DJI"  = "Dow"
-presetConvert "^GSPC" = "Sp500"
-presetConvert "^RUT"  = "Russel"
+presetConvert "^GSPC" = "S&P 500"
+presetConvert "^RUT"  = "Russel 2000"
 presetConvert "^IXIC" = "Nasdaq"
 presetConvert "^VIX"  = "Vix"
 presetConvert "ZC=F"  = "Corn"
@@ -50,6 +51,7 @@ presetConvert "RB=F"  = "RBOB Gasoline"
 presetConvert "^N225" = "Nikkei"
 presetConvert "^HSI"  = "Hang Seng"
 presetConvert "^STI"  = "STI Index"
+presetConvert "^KS11" = "Kopsi"
 presetConvert "^AXJO" = "ASX 200"
 presetConvert "CC=F"  = "Cocao"
 presetConvert "KC=F"  = "Coffee"

@@ -8,6 +8,7 @@ import Text.Regex.PCRE
 import Text.Read
 import Data.List.Utils
 import Data.List
+import Data.List.Split
 import Data.Char
 import qualified Network.HTTP.Types as HTypes
 import qualified Data.ByteString.Char8 as C8
@@ -74,7 +75,10 @@ data StockData = StockData { companyName :: String
                      , afterHours :: String  
                      , weeksChange :: String
                      , peRatio::String
-                     , beta :: String
+                     , beta ::String
+                     , volume::String
+                     , avgVolume::String 
+                     
                      } deriving (Show)
 
 
@@ -86,6 +90,14 @@ listToString l d =  if length (l) > 0 && length (l !! 0) > d
                         (l !! 0 !! d)
                     else
                         ""
+lts::[String]->Int->String->String
+lts [] _ _= ""
+lts l d c=  if length (l) > d  
+                    then 
+                        ((l !! d)++ c)
+                    else
+                        ""
+                  
 
 --process Ticker
 processTicker::String->String
@@ -95,23 +107,30 @@ processTicker a = (map toUpper a)
 
 --marketList
 marketList::String
-marketList = "(Nasdaq|SNP|NYSE"
+marketList = "(Nasdaq|SNP|NYSE|Other OTC"
                ++"|NasdaqGS|AMEX|Cboe|DJI"
                ++"|Chicago|CBOT|COMEX|CCY"
                ++"|NY Mercantile|CCC|Osaka"
-               ++"|HKSE|ASX|ICE|CME|SES|AXS)"
+               ++"|HKSE|ASX|ICE|CME|SES|AXS|Stockholm)"
+
+--currency
+currencyList::String
+currencyList = "(USD|USX|JPY|HKD|SGD|AUD|SEK)"
+
 
 --do regex on yahoo web string      
 parseHtml::String ->String->Maybe StockData
 parseHtml a tick = 
-    let priceList =  a=~"Currency in (USD|USX|JPY|HKD|SGD|AUD)((\\d+,)*?\\d+.\\d+)((-|\\+)(\\d+,)?\\d+.\\d+)\\s+\\(((-|\\+)\\d+.\\d+)%\\)"::[[String]]
+    let priceList =  a=~("Currency in "++currencyList++"((\\d+,)*?\\d+.\\d\\d)((-|\\+)?(\\d+,)?\\d+.\\d\\d)\\s+\\(((-|\\+)?\\d+.\\d+)%\\)")::[[String]]
         companyName = a=~((processTicker tick)++"\\s+-\\s+(.*?)"++marketList++".*?Currency")::[[String]]
         dividend=  a=~"Dividend & Yield\\d+.\\d+\\s+\\((\\d+.\\d+%)\\)"::[[String]]
         marketCap =  a=~"Market Cap(\\d+\\.\\d+(B|T|M))"::[[String]]
         afterHours =   a=~"\\(((-|\\+)\\d+.\\d+)%\\)After hours"::[[String]]
         peRatio = a=~"PE\\s+Ratio\\s+\\(TTM\\)(\\d+.\\d+)"::[[String]]
-        weeksChange = a=~"52-Week\\s+Change\\s+3(\\d+\\.\\d+)%"::[[String]]
+        weeksChange = a=~"52-Week\\s+Change\\s+3(-?\\d+\\.\\d+)%S&P500 52-Week"::[[String]]
         beta        = a=~"Beta\\s+\\(5Y Monthly\\)\\s+(\\d+\\.\\d+)52"::[[String]]
+        volume      = a=~"Volume((\\d+,)+\\d+)"::[[String]]
+        avgVolume   = a=~"Avg. Volume((\\d+,)+\\d+)"::[[String]]
 
     in  if companyName==[]  || priceList== [] then
         Nothing
@@ -126,6 +145,8 @@ parseHtml a tick =
                        ,peRatio =(listToString peRatio 1) 
                        ,weeksChange = (listToString weeksChange 1)
                        ,beta =(listToString beta 1)
+                       ,volume =(listToString volume 1)
+                       ,avgVolume=(listToString avgVolume 1)
                         })
 
 
@@ -146,7 +167,10 @@ getTicker tick  = do
                        ,peRatio =""
                        ,afterHours ="" 
                        ,weeksChange=""
-                       ,beta=""}-- from f
+                       ,beta=""
+                       ,volume =""
+                       ,avgVolume=""
+                       }-- from f
     Just str'' -> pure str'' -- from g if it exists
 
     --get ticker with extended information 
@@ -166,7 +190,9 @@ getTickerStat tick  = do
                        ,peRatio =""
                        ,afterHours ="" 
                        ,weeksChange=""
-                       ,beta=""}-- from f
+                       ,beta=""
+                       ,volume=""
+                       ,avgVolume=""}-- from f
     Just str'' -> pure str'' -- from g if it exists
 
 --Reduce Spaces
@@ -175,7 +201,25 @@ formatSpace = foldr go ""
   where
     go x acc = x:if x == ' ' then dropWhile (' ' ==) acc else acc
 
- 
+--get type
+getType::String->IO String 
+getType tick = do 
+              str1 <- downloadHtml ("https://www.marketwatch.com/investing/stock/"++tick) False 10000
+              --putStrLn  $ show  str1
+
+              let final = str1 =~"(([A-Z]|[a-z]|\\.|\\s|,|-|\\&|\\')+(provides|engaged|engages|operates)(.*?)\\.)"::[[String]]
+              let s = drop 1 $formatSpace $drop 1 $ getTypeF final
+            
+              let m = splitOn "." s
+              
+              return ((lts m 0 ".")++ (lts m 1 "."))
+
+--function
+getTypeF::[[String]]->String
+getTypeF [] = ""
+getTypeF (x:xs) | "\\" `isInfixOf`  (lts x 0 "")  = getTypeF xs
+getTypeF  (x:xs) =  lts x 1 ""
+
 --(get Rev, Cash,Debt,Asset )
 getSheets::String->String->String-> IO [String]
 getSheets c tick quarter= do
@@ -185,12 +229,12 @@ getSheets c tick quarter= do
         
        let test = parseSheetHtml $ removePuncNR ( str1 ++ str2 ++ str3)
       
-       --putStrLn  $ show $ removePuncNR str3
+       putStrLn  $ show $ removePuncNR str3
        return $ replaceStuffs c $ flattenSheet test
 
 
 columnParse::String
-columnParse = "\\s+(\\s+\\(?(\\d+.\\d+)|(\\d)?(T|B|M|K)\\)?)+"
+columnParse = "\\s+(\\s+\\(?((\\d+.\\d+)|(\\d)|(\\d+))(T|B|M|K)\\)?)+"
 
 --Parse balance sheet data
 parseSheetHtml::String->[[String]]
@@ -202,15 +246,17 @@ parseSheetHtml a =
                     revenue  = a =~ ("(Reveue)"++columnParse) ::[[String]] 
                     netIncome  = a =~ ("(Net\\s+Icome)"++columnParse) ::[[String]] 
                     interstIncome = a =~ ("(Iteest\\s+Icome)"++columnParse) ::[[String]] 
-                    
+                    cogs = a =~ ("(Goss\\s+Icome\\s+Gowth)"++"\\s+(\\s+\\(?-?((\\d+.\\d+)|(\\d)|(\\d+)|-)(T|B|M|K|%)?\\)?)+") ::[[String]] 
                in 
                   revenue
                 ++[if length (interstIncome) > 0 && length (revenue) == 0 then   interstIncome !! 0 else [] ]
                 ++ [if length (netIncome) > 0 then   netIncome !! 0 else []]
+                ++ cogs
                 ++ opCashflow 
                 ++ freeCashflow 
                 ++totalAsset 
                 ++ totalLiabilities 
+                
 --Flatten List
 flattenSheet::[[String]]->[String]
 flattenSheet [] = []
@@ -224,6 +270,7 @@ replaceStuffs c (x:xs)| "Reveue" `isInfixOf` x = [replace "Reveue" ("PRIVMSG:"++
 replaceStuffs c (x:xs)| "Net Opeatig Cash Flow" `isInfixOf` x = [replace "Net Opeatig Cash Flow" ("PRIVMSG:"++c++" :Net Operatig Cash Flow") x] ++ replaceStuffs c xs          
 replaceStuffs c (x:xs)| "Fee Cash Flow" `isInfixOf` x = [replace "Fee Cash Flow" ("PRIVMSG:"++c++" :Free Cash Flow") x] ++ replaceStuffs c xs
 replaceStuffs c (x:xs)| "Net Icome" `isInfixOf` x = [replace "Net Icome" ("PRIVMSG:"++c++" :Net Income") x] ++ replaceStuffs c xs
+replaceStuffs c (x:xs)| "Goss Icome Gowth" `isInfixOf`x = [replace "Goss Icome Gowth" ("PRIVMSG:"++c++" :Gross Income Growth") x] ++ replaceStuffs c xs
 replaceStuffs c (x:xs) = [("PRIVMSG:"++c++" :"++x)] ++ replaceStuffs c xs
 
 --Parse Crypto
@@ -246,7 +293,10 @@ parseCrypto a s = let b =s =~((map toUpper a)
                                           ,peRatio=listToString b  2 
                                           ,afterHours=listToString b  2
                                           ,weeksChange=listToString b 2
-                                          ,beta=listToString b 2 })
+                                          ,beta=listToString b 2 
+                                          ,volume = listToString b 2
+                                          ,avgVolume=listToString b 2
+                                          })
 
 getCrypto::String->IO StockData
 getCrypto tick  = do
@@ -261,5 +311,8 @@ getCrypto tick  = do
                        ,peRatio =""
                        ,afterHours ="" 
                        ,weeksChange=""
-                       ,beta=""}-- from f
+                       ,beta=""
+                       ,volume=""
+                       ,avgVolume=""
+                       }-- from f
      Just str'' -> pure str''

@@ -28,9 +28,11 @@ composeFinal [] = return ""
 composeFinal (x:xs)| length (removePunc x) == 0 =return ""
 composeFinal (x:xs)|length xs == 0 = do 
                             a <- getTickerStat x 
-                            let string = ( tupleToString LongS $ formatStockData a) 
+                            let string = ( tupleToString LongS $ formatStockData a) ++ ","
                             return string
 composeFinal xs = composeString xs
+
+
 
 --take a list of company names, prices and percentage changes and return a string
 composeString::[String]->IO String
@@ -55,6 +57,8 @@ tupleToString LongS StockData{..}  =  ticker
                                     ++ marketCap
                                     ++ weeksChange 
                                     ++ beta
+                                    ++ volume
+                                    ++ avgVolume
 tupleToString ShortS StockData{..}     = ticker 
                                     ++  price 
                                     ++  percentageChange 
@@ -89,7 +93,9 @@ formatStockData s@StockData{..} = StockData{
                                           ,afterHours = tagData (addColor s) "AfterHours:" afterHours
                                           ,peRatio = tagData (addColor s) "P/E:" peRatio 
                                           ,weeksChange = tagData (addColor s) "52 Week Change:" weeksChange
-                                          ,beta = tagData (addColor s) "Beta:" beta}
+                                          ,beta = tagData (addColor s) "Beta:" beta
+                                          ,volume = tagData (addColor s) "Volume:" volume
+                                          ,avgVolume = tagData (addColor s) "Avg. Volume:" avgVolume}
  
 
 --add Color
