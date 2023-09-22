@@ -43,7 +43,7 @@ yfUrl::String->String
 yfUrl a = "https://finance.yahoo.com/quote/" ++ a
 
 yfUrlStat::String->String
-yfUrlStat a = "https://finance.yahoo.com/quote/" ++ a ++ "/key-statistics?p="
+yfUrlStat a = "https://finance.yahoo.com/quote/" ++ a ++ "/key-statistics?p="++ a
 
 --download html 
 downloadHtml :: String->Bool->Int-> IO  String
@@ -57,9 +57,9 @@ downloadHtml a b n = do
     
     let justText =  (fromFooter  $ parseTags $ show res)
 
-    --putStrLn $ show $ take 3000 justText
+    --putStrLn $ show $ justText
     if b == True then
-      return $ show $ take (n * 3 )justText 
+      return $ show $ justText 
     else
       return  $ show $ justText
      
@@ -78,8 +78,8 @@ data StockData = StockData { companyName :: String
                      , beta ::String
                      , volume::String
                      , avgVolume::String 
-                     
-                     } deriving (Show)
+                     , priceSale::String
+                    } deriving (Show)
 
 
 --convert list to string
@@ -111,34 +111,37 @@ marketList = "(Nasdaq|SNP|NYSE|Other OTC"
                ++"|NasdaqGS|AMEX|Cboe|DJI"
                ++"|Chicago|CBOT|COMEX|CCY"
                ++"|NY Mercantile|CCC|Osaka"
-               ++"|HKSE|ASX|ICE|CME|SES|AXS|Stockholm)"
+               ++"|HKSE|ASX|ICE|CME|SES|AXS|Stockholm"
+               ++"|Shanghai)"
 
 --currency
 currencyList::String
-currencyList = "(USD|USX|JPY|HKD|SGD|AUD|SEK)"
+currencyList = "(USD|CAD|USX|JPY|HKD|SGD|AUD|SEK|MXN|CNY|TRY)"
 
 
 --do regex on yahoo web string      
 parseHtml::String ->String->Maybe StockData
 parseHtml a tick = 
-    let priceList =  a=~("Currency in "++currencyList++"((\\d+,)*?\\d+.\\d\\d)((-|\\+)?(\\d+,)?\\d+.\\d\\d)\\s+\\(((-|\\+)?\\d+.\\d+)%\\)")::[[String]]
-        companyName = a=~((processTicker tick)++"\\s+-\\s+(.*?)"++marketList++".*?Currency")::[[String]]
+    let priceList =  a=~("((\\d+,)*?\\d+.\\d+)((-|\\+)?(\\d+,)?\\d+.\\d+)\\s+\\(((-|\\+)?\\d+.\\d+)%\\)")::[[String]]
+        companyName = a=~("((\\w|\\s|\\.|,|\\^|\\&|')+)\\("++ processTicker tick ++"\\)")::[[String]]
         dividend=  a=~"Dividend & Yield\\d+.\\d+\\s+\\((\\d+.\\d+%)\\)"::[[String]]
         marketCap =  a=~"Market Cap(\\d+\\.\\d+(B|T|M))"::[[String]]
         afterHours =   a=~"\\(((-|\\+)\\d+.\\d+)%\\)After hours"::[[String]]
         peRatio = a=~"PE\\s+Ratio\\s+\\(TTM\\)(\\d+.\\d+)"::[[String]]
-        weeksChange = a=~"52-Week\\s+Change\\s+3(-?\\d+\\.\\d+)%S&P500 52-Week"::[[String]]
+        weeksChange = a=~"52\\s+Week\\s+Range((\\d+,)*?\\d+.\\d+\\s+-\\s+(\\d+,)*?\\d+.\\d+)"::[[String]]
         beta        = a=~"Beta\\s+\\(5Y Monthly\\)\\s+(\\d+\\.\\d+)52"::[[String]]
         volume      = a=~"Volume((\\d+,)+\\d+)"::[[String]]
         avgVolume   = a=~"Avg. Volume((\\d+,)+\\d+)"::[[String]]
+        priceSale   = a=~"Price\\/Sales\\s+\\(ttm\\)(\\d+\\.\\d\\d)"::[[String]]
+       
 
-    in  if companyName==[]  || priceList== [] then
+    in  if priceList== [] || companyName == [] then
         Nothing
         else 
-        Just(StockData{ companyName = (formatSpace $ removePuncc $ listToString companyName  1) 
+        Just(StockData{ companyName = ( listToString companyName  1) 
                        ,ticker = tick
-                       ,price = (listToString priceList  2)
-                       ,percentageChange = (listToString priceList 7)
+                       ,price = (listToString priceList  1)
+                       ,percentageChange = (listToString priceList 6)
                        ,dividend= (listToString dividend  1) 
                        ,marketCap = (listToString marketCap  1)
                        ,afterHours =(listToString afterHours 1)
@@ -147,13 +150,15 @@ parseHtml a tick =
                        ,beta =(listToString beta 1)
                        ,volume =(listToString volume 1)
                        ,avgVolume=(listToString avgVolume 1)
+                       ,priceSale=(listToString priceSale 1)
+                       
                         })
 
 
     --get ticker with simple information
 getTicker :: String -> IO StockData
 getTicker tick  = do
-  str' <- downloadHtml  (yfUrl tick) True 1000
+  str' <- downloadHtml  (yfUrl tick) True 1500
   
 
 
@@ -170,14 +175,15 @@ getTicker tick  = do
                        ,beta=""
                        ,volume =""
                        ,avgVolume=""
+                       ,priceSale=""
                        }-- from f
     Just str'' -> pure str'' -- from g if it exists
 
     --get ticker with extended information 
 getTickerStat :: String -> IO StockData
 getTickerStat tick  = do
-  str' <- downloadHtml  (yfUrl tick) True 1000
-  str1' <- downloadHtml  (yfUrlStat tick) True 1000
+  str' <- downloadHtml  (yfUrl tick) True 1500
+  str1' <- downloadHtml  (yfUrlStat tick) True 1500
 
 
   case parseHtml (str'++str1') tick of
@@ -192,7 +198,9 @@ getTickerStat tick  = do
                        ,weeksChange=""
                        ,beta=""
                        ,volume=""
-                       ,avgVolume=""}-- from f
+                       ,avgVolume=""
+                       ,priceSale=""
+                       }-- from f
     Just str'' -> pure str'' -- from g if it exists
 
 --Reduce Spaces
@@ -207,7 +215,9 @@ getType tick = do
               str1 <- downloadHtml ("https://www.marketwatch.com/investing/stock/"++tick) False 10000
               --putStrLn  $ show  str1
 
-              let final = str1 =~"(([A-Z]|[a-z]|\\.|\\s|,|-|\\&|\\')+(provides|engaged|engages|operates)(.*?)\\.)"::[[String]]
+              let final = str1 =~("(([A-Z]|[a-z]|\\.|\\d|\\s|,|-|\\&|\\')+"
+                                  ++"(explores|produces|provides|engaged|engages|operates)"
+                                  ++"(.*?)\\.)")::[[String]]
               let s = drop 1 $formatSpace $drop 1 $ getTypeF final
             
               let m = splitOn "." s
@@ -296,6 +306,7 @@ parseCrypto a s = let b =s =~((map toUpper a)
                                           ,beta=listToString b 2 
                                           ,volume = listToString b 2
                                           ,avgVolume=listToString b 2
+                                          ,priceSale=listToString b 2
                                           })
 
 getCrypto::String->IO StockData
@@ -314,5 +325,6 @@ getCrypto tick  = do
                        ,beta=""
                        ,volume=""
                        ,avgVolume=""
+                       ,priceSale=""
                        }-- from f
      Just str'' -> pure str''

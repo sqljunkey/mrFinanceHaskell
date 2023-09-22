@@ -8,6 +8,7 @@ import Presets
 --color data type
 data Color = Green | Red | Blue
 data Issue = Crypto | LongS| ShortS
+data Tag = Change | AfterHours | None
 
 -- Remove punctuation from text String.
 removePunc :: String -> String
@@ -50,10 +51,11 @@ tupleToString _ StockData{..}| "" == price = ""
 tupleToString LongS StockData{..}  =  ticker 
                                     ++ price 
                                     ++ percentageChange
+                                    ++ afterHours
                                     ++ companyName 
                                     ++ dividend 
+                                    ++ priceSale
                                     ++ peRatio 
-                                    ++ afterHours 
                                     ++ marketCap
                                     ++ weeksChange 
                                     ++ beta
@@ -73,36 +75,40 @@ tagData::Color->String->String->String
 tagData  _ _ "" ="" 
 tagData Green "Price:"  a =" \x03\&03" ++  a ++  "\x03 "
 tagData Red "Price:"  a = " \x03\&04" ++  a ++  "\x03 "
-tagData Blue "Price:"  a = a ++ " "
+tagData Blue "Price:"  a = " " ++ a ++ " "
 tagData Green "Change:"  a = " \x03\&03" ++  a ++  "%\x03 "
 tagData Red "Change:"  a =   " \x03\&04" ++  a ++  "%\x03 "
 tagData Blue "Change:"  a = a ++ "% "
-tagData _ "AfterHours:"  a ="After Hour(s): " ++ a ++ "% "
-tagData _ "52 Week Change:"  a ="52 Week Change: " ++ a ++ "% "
-tagData c a b = a ++" "++ b ++ " "
+tagData Green "AH:"  a ="\x03\&03AH: " ++ a ++ "%\x03 | "
+tagData Red "AH:"  a ="\x03\&04AH: " ++ a ++ "%\x03 | "
+tagData Blue "AH:"  a ="AH: " ++ a ++ "% | "
+tagData c a b = a ++" "++ b ++ " | "
 
 --helper StockData A
 formatStockData::StockData->StockData
 formatStockData s@StockData{..} = StockData{
                                           ticker = ((presetConvert ticker) ++":")
-                                          ,companyName = tagData (addColor s) "" companyName
-                                          ,price = tagData (addColor s) "Price:" price
-                                          ,percentageChange = tagData (addColor s) "Change:" percentageChange
-                                          ,dividend = tagData (addColor s) "Div:" dividend
-                                          ,marketCap = tagData (addColor s) "Market Cap:" marketCap
-                                          ,afterHours = tagData (addColor s) "AfterHours:" afterHours
-                                          ,peRatio = tagData (addColor s) "P/E:" peRatio 
-                                          ,weeksChange = tagData (addColor s) "52 Week Change:" weeksChange
-                                          ,beta = tagData (addColor s) "Beta:" beta
-                                          ,volume = tagData (addColor s) "Volume:" volume
-                                          ,avgVolume = tagData (addColor s) "Avg. Volume:" avgVolume}
+                                          ,companyName = tagData (addColor s None) "" companyName
+                                          ,price = tagData (addColor s Change) "Price:" price
+                                          ,percentageChange = tagData (addColor s Change) "Change:" percentageChange
+                                          ,dividend = tagData (addColor s None) "Div:" dividend
+                                          ,marketCap = tagData (addColor s None) "MCap:" marketCap
+                                          ,afterHours = tagData (addColor s AfterHours) "AH:" afterHours
+                                          ,peRatio = tagData (addColor s None) "P/E:" peRatio 
+                                          ,weeksChange = tagData (addColor s None ) "52WR:" weeksChange
+                                          ,beta = tagData (addColor s None) "B:" beta
+                                          ,volume = tagData (addColor s None) "V:" volume
+                                          ,avgVolume = tagData (addColor s None) "AvgV:" avgVolume
+                                          ,priceSale = tagData (addColor s None) "P/S:" priceSale}
  
 
 --add Color
-addColor::StockData->Color
-addColor StockData{..} |"-" `isInfixOf` percentageChange = Red
-addColor StockData{..} |"+" `isInfixOf` percentageChange = Green
-addColor StockData{..}                 = Blue
+addColor::StockData->Tag->Color
+addColor StockData{..} Change|"-" `isInfixOf` percentageChange = Red
+addColor StockData{..} Change|"+" `isInfixOf` percentageChange = Green
+addColor StockData{..} AfterHours|"-" `isInfixOf` afterHours = Red
+addColor StockData{..} AfterHours|"+" `isInfixOf` afterHours = Green
+addColor StockData{..} _ = Blue
 
 
 

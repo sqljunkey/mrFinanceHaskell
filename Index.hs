@@ -46,5 +46,8 @@ presetIndex "hammond" = do
 presetIndex "bad" = do
                     a <-getAverage "bad.lst"
                     return $ "Hammond's About To File For Chapter 11 Index. :" ++  a
+presetIndex "ai" = do 
+                    a <-getAverage "ai.lst"
+                    return $ "The Artificial Intelligence Index. :" ++  a
 presetIndex a = return ""
 
