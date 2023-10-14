@@ -4,7 +4,6 @@ module Download where
 import Network.Connection (TLSSettings (..))
 import Network.HTTP.Conduit
 import Text.HTML.TagSoup
---import Text.Regex.PCRE
 import Text.Regex.TDFA
 import Text.Read
 import Data.List.Utils
@@ -72,7 +71,7 @@ downloadHtml a n = do
     
                        
 
-    putStrLn $ get_tags (L8.unpack $ responseBody res) n
+    --putStrLn $ get_tags (L8.unpack $ responseBody res) n
 
     return $ get_tags (L8.unpack $ responseBody res) n
 
@@ -269,17 +268,22 @@ formatSpace = foldr go ""
 --get type
 getType::String->IO String 
 getType tick = do 
-              str1 <- downloadHtml ("https://www.marketwatch.com/investing/stock/"++tick) 30000
-              --putStrLn  $ show  str1
-
-              let final = str1 =~("(([A-Z]|[a-z]|\\.|\\d|\\s|,|-|\\&|\\')+"
+              str1 <- downloadHtml ("https://www.marketwatch.com/investing/stock/"++tick) 300000
+             
+             
+              let all = ("([A-Z]|[a-z]|\\.|[0-9]|"
+                                  ++space
+                                  ++"|,|-|\\&|\\')+")
+              let final = str1 =~ (all
                                   ++"(explores|produces|provides|engaged|engages|operates)"
-                                  ++"(.*?)\\.)")::[[String]]
-              let s = drop 1 $formatSpace $drop 1 $ getTypeF final
+                                  ++all
+                                  ++"\\.")::[[String]]
+              let s = formatSpace $ listToString final 0
             
               let m = splitOn "." s
+
               
-              return ((lts m 0 ".")++ (lts m 1 "."))
+              return $ s
 
 --function
 getTypeF::[[String]]->String

@@ -4,6 +4,7 @@ module Test where
 import Text.Regex.PCRE
 import Control.Exception              -- base
 import Control.Monad.IO.Class         --
+import Control.Concurrent (threadDelay)
 import Control.Lens
 import Data.List                      --
 import Data.List.Split
@@ -14,11 +15,15 @@ import Control.Monad.Trans.Reader     -- transformers
 import Command
 import Data.Foldable
 
+import Control.Monad.State
+
+
+
 -- Configuration options
 myServer = "irc.libera.chat" :: String
 myPort   = 6667 :: N.PortNumber
 myChan   = "##investments" :: String
-myNick   = "haskellmrFinance" :: String
+myNick   = "mrfinance" :: String
 
 
 -- The 'Net' monad, a wrapper over IO, carrying the bot's immutable state.
@@ -48,12 +53,20 @@ connectTo host port = do
 -- Join a channel, and start processing commands
 run :: Net ()
 run = do
+
+
+
     write "NICK" myNick
-    write "USER" (myNick ++ " 0 * :mr finance")
+    write "USER" (myNick ++ " 0 * :mrfinance")
+    write "PRIVMSG" "nickserv :id qwerty"
+    liftIO (threadDelay (10000 * 1000))
     write "JOIN" "##investments"
     write "JOIN" "##econometrics"
     write "JOIN" "#materia"
     write "JOIN" "#bitcoin-pricetalk"
+    write "JOIN" "##economics"
+   
+    
     listen
 
 -- Send a message to the server we're currently connected to
@@ -72,6 +85,8 @@ listen = forever $ do
     liftIO (putStrLn line)
     let s = init line
     let c = getChannel s
+
+
     
     if isPing s then pong s else evalList (command c ( splitOn " " (clean s)))
   where
@@ -86,6 +101,7 @@ listen = forever $ do
 
     pong :: String -> Net ()
     pong x = write "PONG" (':' : drop 6 x)
+             
 
 eval :: String -> Net ()
 eval  a = do
