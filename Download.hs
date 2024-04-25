@@ -244,7 +244,7 @@ formatSpace = foldr go ""
 --get type
 getType::String->IO String 
 getType tick = do 
-              str1 <- download_raw_html ("http://127.0.0.1:9090/type-"++tick) 300000
+              str1 <- download_raw_html ("http://127.0.0.1:9091/"++tick) 300000
              
              
            
@@ -265,7 +265,7 @@ getType tick = do
 --(get Rev, Cash,Debt,Asset )
 getSheets::String->String->String-> IO [String]
 getSheets nick tick quarter= do
-       str1 <- download_raw_html ("http://127.0.0.1:9090/fund-"++tick) 300000
+       str1 <- download_raw_html ("http://127.0.0.1:9091/"++tick) 300000
         
        let html = parseSheetHtml   str1
 
@@ -287,13 +287,13 @@ percentage = "("++space++"-?([0-9]+|[0-9]+.[0-9]+)?(%|-)?)+"
 --use Regex to parseSheet
 parseSheetHtml::String->[[String]]
 parseSheetHtml a = 
-                let totalAsset =a =~("<asset>(.*)</asset>") :: [[String]]
-                    totalLiabilities = a =~ ("<debt>(.*)</debt>") ::[[String]] 
+                let totalAsset =a =~("<total_asset>(.*)</total_asset>") :: [[String]]
+                    totalLiabilities = a =~ ("<total_debt>(.*)</total_debt>") ::[[String]] 
                     freeCashflow = a =~("<free_cashflow>(.*)</free_cashflow>") ::[[String]] 
                     opCashflow  = a =~ ("<cashflow>(.*)</cashflow>") ::[[String]] 
                     revenue  = a =~ ("<revenue>(.*)</revenue>") ::[[String]] 
                     netIncome  = a =~ ("<net_income>(.*)</net_income>") ::[[String]]
-                    year =      a =~("<year>(.*)</year>")::[[String]]
+                    year =      a =~("<years>(.*)</years>")::[[String]]
               
                in
                   year
