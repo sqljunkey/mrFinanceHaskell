@@ -1,0 +1,43 @@
+import socket
+import yfinance as yf
+
+# Define socket host and port
+SERVER_HOST = '0.0.0.0'
+SERVER_PORT = 8000
+
+# Create socket
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+server_socket.bind((SERVER_HOST, SERVER_PORT))
+server_socket.listen(1)
+print('Listening on port %s ...' % SERVER_PORT)
+
+def get_stock_price(symbol):
+    try:
+        stock = yf.Ticker(symbol)
+        price = stock.history(period='1d')['Close'][0]
+        return str(price)
+    except:
+        return "Stock symbol not found"
+
+while True:
+    # Wait for client connections
+    client_connection, client_address = server_socket.accept()
+
+    # Get the client request
+    request = client_connection.recv(1024).decode()
+    print(request)
+
+    # Extract stock symbol from the request
+    stock_symbol = request.split()[1][1:]  # Assuming the request is like "GET /stock_symbol HTTP/1.1"
+    
+    # Get stock price
+    stock_price = get_stock_price(stock_symbol)
+
+    # Send HTTP response
+    response = f'HTTP/1.0 200 OK\n\n{stock_price}'
+    client_connection.sendall(response.encode())
+    client_connection.close()
+
+# Close socket
+server_socket.close()
