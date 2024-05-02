@@ -48,6 +48,7 @@ def get_stock_details(symbol):
           
         data = stock.info
         change = ((price/data.get("regularMarketPreviousClose", "N/A"))-1.0)*100.0;
+        factual_change = price - data.get("regularMarketPreviousClose", 0.0)
 
         
         xml_response = f'<stock>\n'
@@ -55,6 +56,7 @@ def get_stock_details(symbol):
         xml_response += f'\t<long_name>{data.get("longName",data.get("shortName","N/A"))}</long_name>\n'
         xml_response += f'\t<current_price>{format_two_decimal(price)}</current_price>\n'
         xml_response += f'\t<percentage>{format_number_with_sign(change)}</percentage>\n'
+        xml_response += f'\t<change>{format_number_with_sign(factual_change)}</change>\n'
         xml_response += f'\t<beta>{data.get("beta", "N/A")}</beta>\n'
         xml_response += f'\t<dividend_yield>{decimal_to_percentage(data.get("dividendYield", "N/A"))}</dividend_yield>\n'
         xml_response += f'\t<market_cap>{format_number(data.get("marketCap", "N/A"))}</market_cap>\n'

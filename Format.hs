@@ -8,7 +8,7 @@ import Presets
 --color data type
 data Color = Green | Red | Blue
 data Issue = Crypto | LongS| ShortS
-data Tag = Change | AfterHours | None
+data Tag = Change | AfterHours |Ch | None
 
 -- Remove punctuation from text String.
 removePunc :: String -> String
@@ -49,7 +49,8 @@ composeString (x:xs) = do
 tupleToString::Issue->StockData->String
 tupleToString _ StockData{..}| "" == price = ""
 tupleToString LongS StockData{..}  =  ticker 
-                                    ++ price 
+                                    ++ price
+                                    ++ change
                                     ++ percentageChange
                                     ++ afterHours
                                     ++ companyName 
@@ -76,6 +77,9 @@ tagData  _ _ "" =""
 tagData Green "Price:"  a =" \x03\&03" ++  a ++  "\x03 "
 tagData Red "Price:"  a = " \x03\&04" ++  a ++  "\x03 "
 tagData Blue "Price:"  a = " " ++ a ++ " "
+tagData Blue "Ch:"  a = " " ++ a ++ " "
+tagData Green "Ch:"  a = " \x03\&03" ++ a ++ "\x03 " 
+tagData Red "Ch:"  a = " \x03\&04" ++ a ++ "\x03 "
 tagData Green "Change:"  a = " \x03\&03" ++  a ++  "%\x03 "
 tagData Red "Change:"  a =   " \x03\&04" ++  a ++  "%\x03 "
 tagData Blue "Change:"  a = a ++ "% "
@@ -91,6 +95,7 @@ formatStockData s@StockData{..} = StockData{
                                           ,companyName = tagData (addColor s None) "" companyName
                                           ,price = tagData (addColor s Change) "Price:" price
                                           ,percentageChange = tagData (addColor s Change) "Change:" percentageChange
+                                          ,change = tagData (addColor s Ch) "Ch:" change
                                           ,dividend = tagData (addColor s None) "Div:" dividend
                                           ,marketCap = tagData (addColor s None) "MCap:" marketCap
                                           ,afterHours = tagData (addColor s AfterHours) "AH:" afterHours
@@ -104,6 +109,8 @@ formatStockData s@StockData{..} = StockData{
 
 --add Color
 addColor::StockData->Tag->Color
+addColor StockData{..} Ch|"-" `isInfixOf` change = Red
+addColor StockData{..} Ch|"+" `isInfixOf` change = Green
 addColor StockData{..} Change|"-" `isInfixOf` percentageChange = Red
 addColor StockData{..} Change|"+" `isInfixOf` percentageChange = Green
 addColor StockData{..} AfterHours|"-" `isInfixOf` afterHours = Red

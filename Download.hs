@@ -101,7 +101,8 @@ download_raw_html a n = do
 data StockData = StockData { companyName :: String  
                      , ticker :: String  
                      , price :: String  
-                     , percentageChange :: String 
+                     , percentageChange :: String
+                     , change :: String
                      , dividend :: String  
                      , marketCap :: String  
                      , afterHours :: String  
@@ -158,6 +159,7 @@ parseHtml a tick =
     let priceList =  a=~("<current_price>(.*)</current_price>")::[[String]]
         companyName = a=~("<long_name>(.*)</long_name>")::[[String]]
         percentage = a=~("<percentage>(.*)</percentage>")::[[String]]
+        change    = a=~("<change>(.*)</change>")::[[String]]
         dividend=  a=~ ("<dividend_yield>(.*)</dividend_yield>")::[[String]]
         marketCap =  a=~("<market_cap>(.*)</market_cap>")::[[String]]
         afterHours =   a=~"\\(((-|\\+)?[0-9]+.[0-9]+)%\\)After hours"::[[String]]
@@ -176,6 +178,7 @@ parseHtml a tick =
                        ,ticker = tick
                        ,price = (listToString priceList  1)
                        ,percentageChange = (listToString percentage 1)
+                       ,change = (listToString change 1)
                        ,dividend=(listToString dividend  1) 
                        ,marketCap =(listToString marketCap  1)
                        ,afterHours =(listToString afterHours 1)
@@ -198,6 +201,7 @@ getTicker tick  = do
     Nothing -> pure StockData{companyName ="" 
                        ,ticker = tick
                        ,price = ""
+                       ,change =""
                        ,percentageChange = ""
                        ,dividend= ""  
                        ,marketCap = ""
@@ -222,6 +226,7 @@ getTickerStat tick  = do
     Nothing -> pure StockData{companyName ="" 
                        ,ticker = tick
                        ,price = ""
+                       ,change =""
                        ,percentageChange = ""
                        ,dividend= ""  
                        ,marketCap = ""
@@ -290,7 +295,7 @@ parseSheetHtml a =
                 let totalAsset =a =~("<total_asset>(.*)</total_asset>") :: [[String]]
                     totalLiabilities = a =~ ("<total_debt>(.*)</total_debt>") ::[[String]] 
                     freeCashflow = a =~("<free_cashflow>(.*)</free_cashflow>") ::[[String]] 
-                    opCashflow  = a =~ ("<cashflow>(.*)</cashflow>") ::[[String]] 
+                    repurchase  = a =~ ("<stock_repurchase>(.*)</stock_repurchase>") ::[[String]] 
                     revenue  = a =~ ("<revenue>(.*)</revenue>") ::[[String]] 
                     netIncome  = a =~ ("<net_income>(.*)</net_income>") ::[[String]]
                     year =      a =~("<years>(.*)</years>")::[[String]]
@@ -299,7 +304,7 @@ parseSheetHtml a =
                   year
                  ++revenue 
                  ++netIncome 
-                 ++opCashflow
+                 ++repurchase
                  ++freeCashflow 
                  ++totalAsset
                  ++ totalLiabilities
@@ -331,6 +336,7 @@ parseCrypto a s = let b =s =~("(([A-Z]+)?([a-z]+)?)+"
                                           ,ticker =a 
                                           ,price = listToString b  4
                                           ,percentageChange= listToString b 8
+                                          ,change =""
                                           ,dividend=listToString b  2 
                                           ,marketCap=listToString b  2 
                                           ,peRatio=listToString b  2 
@@ -350,6 +356,7 @@ getCrypto tick  = do
                        ,ticker = tick
                        ,price = ""
                        ,percentageChange = ""
+                       ,change =""
                        ,dividend= ""  
                        ,marketCap = ""
                        ,peRatio =""

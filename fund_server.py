@@ -1,6 +1,7 @@
 import socket
 import yfinance as yf
 
+
 # Define socket host and port
 SERVER_HOST = '0.0.0.0'
 SERVER_PORT = 9091
@@ -50,22 +51,40 @@ def get_stock_details(symbol):
         info = stock.info.get("longBusinessSummary","N/A")
         
         
-        net_income_row = stock.income_stmt.loc['Net Income']
-        revenue = stock.income_stmt.loc['Total Revenue']
-        total_debt = stock.balance_sheet.loc['Total Debt']
-        total_asset = stock.balance_sheet.loc['Total Assets']
-    
+
+        # Initialize variables with default values
+        net_income_row = {}
+        revenue = {}
+        total_debt = {}
+        total_asset = {}
+        free_cash_flow = {}
+        stock_repurchase = {}
+
+        # Get values if located
+        if 'Net Income' in stock.income_stmt.index:
+            net_income_row = stock.income_stmt.loc['Net Income']
+        if 'Total Revenue' in stock.income_stmt.index:
+            revenue = stock.income_stmt.loc['Total Revenue']
+        if 'Total Debt' in stock.balance_sheet.index:
+            total_debt = stock.balance_sheet.loc['Total Debt']
+        if 'Total Assets' in stock.balance_sheet.index:
+            total_asset = stock.balance_sheet.loc['Total Assets']
+        if 'Free Cash Flow' in stock.cashflow.index:
+            free_cash_flow = stock.cashflow.loc['Free Cash Flow']
+        if 'Repurchase Of Capital Stock' in stock.cashflow.index:
+            stock_repurchase = stock.cashflow.loc['Repurchase Of Capital Stock']
+
+        # Build XML content
         xml_content = '<income_statement>\n'
-       
-        
-    
         xml_content += '\t\t<years>              ' + '    '.join(str(year.year) for year in years) + '</years>\n'
-        
-        xml_content +=    '\t\t<revenue>Revenue      : ' + '  '.join(str(format_number(revenue[year])) for year in years) + '</revenue>\n'
-        xml_content += '\t\t<net_income>Net Income   : ' + '  '.join(str(format_number(net_income_row[year])) for year in years) + '</net_income>\n'
-        xml_content +=    '\t\t<total_debt>Total Debt   : ' + '  '.join(str(format_number(total_debt[year])) for year in years) + '</total_debt>\n'
-        xml_content +=    '\t\t<total_asset>Total Asset  : ' + '  '.join(str(format_number(total_asset[year])) for year in years) + '</total_asset>\n'
-        xml_content +=f'\t\t<type>{info[0:1000]}....</type>\n'
+        xml_content += '\t\t<revenue>Revenue      : ' + '  '.join(str(format_number(revenue.get(year, 0.0))) for year in years) + '</revenue>\n'
+        xml_content += '\t\t<net_income>Net Income   : ' + '  '.join(str(format_number(net_income_row.get(year, 0.0))) for year in years) + '</net_income>\n'
+        xml_content += '\t\t<free_cashflow>FCF          : ' + '  '.join(str(format_number(free_cash_flow.get(year, 0.0))) for year in years) + '</free_cashflow>\n'
+        xml_content += '\t\t<stock_repurchase>Stock Buyback: ' + '  '.join(str(format_number(stock_repurchase.get(year, 0.0))) for year in years) + '</stock_repurchase>\n'
+        xml_content += '\t\t<total_debt>Total Debt   : ' + '  '.join(str(format_number(total_debt.get(year, 0.0))) for year in years) + '</total_debt>\n'
+        xml_content += '\t\t<total_asset>Total Asset  : ' + '  '.join(str(format_number(total_asset.get(year, 0.0))) for year in years) + '</total_asset>\n'
+        xml_content += f'\t\t<type>{info[0:1000]}....</type>\n'
+        xml_content += '</income_statement>'
         
       
         xml_content += '</income_statement>'
