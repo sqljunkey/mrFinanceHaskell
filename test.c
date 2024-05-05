@@ -4,21 +4,21 @@
 #include <sys/time.h>
 #include <stdint.h>
 #include <string.h>
+#include <ctype.h>
+
 
 
 
 
 const char * post_market = "\"postMarketPrice\":{\"raw\":";
 const char * reg_market = "\"regularMarketPrice\":{\"raw\":";
-const char * pre_market ="";
-const char * reg_chg_market ="";
-const char * chg_pcnt_reg_market="";
+const char * post_chg_market ="\"postMarketChangePercent\":{\"raw\":";
 const char * end= ",\"fmt\":";
 
 
 char * post_price = NULL;
 char * reg_price = NULL;
-
+char * post_chg = NULL;
 
 char* fwrite_to_string(const void* data, size_t size) {
    
@@ -44,6 +44,34 @@ char* fwrite_to_string(const void* data, size_t size) {
     buffer[size] = '\0';
 
     return buffer;
+}
+
+double custom_round(double value) {
+    return (double)((int)(value * 100.0 + 0.5)) / 100.0;
+}
+
+
+char* format_number_percent(const char* number_str) {
+    double number = atof(number_str); 
+
+    
+    double rounded_number = custom_round(number * 100.0) / 100.0;
+
+    
+    char* formatted_str = (char*)malloc(20 * sizeof(char)); 
+    if (formatted_str == NULL) {
+        fprintf(stderr, "Memory allocation failed\n");
+        return NULL;
+    }
+
+    
+    if (rounded_number >= 0) {
+        snprintf(formatted_str, 20, "+%.2f", rounded_number);
+    } else {
+        snprintf(formatted_str, 20, "%.2f", rounded_number);
+    }
+
+    return formatted_str;
 }
 
 
@@ -148,7 +176,7 @@ char* find_middle_string(const char* str, const char* start_substr, const char* 
 
 void process_html(const char *html_string){
 
-  if(post_price!=NULL && reg_price!=NULL){
+  if(post_price!=NULL && reg_price!=NULL && post_chg!=NULL){
 
     
 
@@ -158,7 +186,7 @@ void process_html(const char *html_string){
    
     post_price =  find_middle_string(processed_string, post_market, end);
     reg_price  =  find_middle_string(processed_string, reg_market, end);
-    
+    post_chg   =  find_middle_string(processed_string, post_chg_market, end);
 
     
 
@@ -197,6 +225,28 @@ size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
     return (size * nmemb);
 }
 
+char* to_uppercase(const char* str) {
+    
+    size_t len = strlen(str);
+
+   
+    char* result = (char*)malloc((len + 1) * sizeof(char));
+    if (result == NULL) {
+        fprintf(stderr, "Memory allocation failed.\n");
+        return NULL;
+    }
+
+    
+    for (size_t i = 0; i < len; i++) {
+        result[i] = toupper(str[i]);
+    }
+
+   
+    result[len] = '\0';
+
+    return result;
+}
+
 int main(int argc, char *argv[]) {
 
   
@@ -209,7 +259,7 @@ int main(int argc, char *argv[]) {
 
   
 
-    char * url = concat( "https://finance.yahoo.com/quote/" , argv[1]); 
+  char * url = concat( "https://finance.yahoo.com/quote/" , to_uppercase(argv[1])); 
 	
     struct timeval stop, start;
     gettimeofday(&start, NULL);
@@ -241,12 +291,19 @@ int main(int argc, char *argv[]) {
      
 
      if(reg_price!=NULL){
-       printf("Reg_Price: %s\n", reg_price);
+       printf("<regular_price>%s</regular_price>", reg_price);
       }
 
      if(post_price!=NULL){
-        printf("Post_Price: %s\n", post_price);
+        printf("<post_price>%s</post_price>", post_price);
       }
+
+     if(post_chg!=NULL){
+       printf("<post_change>%s</post_change>", format_number_percent(post_chg));
+	 
+       }
+
+       
      printf("\n");
      printf("Process took %lu u-seconds.\n", (stop.tv_sec - start.tv_sec) * 1000000 + stop.tv_usec - start.tv_usec); 
 

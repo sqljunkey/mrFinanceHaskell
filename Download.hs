@@ -31,28 +31,12 @@ removePuncc :: String -> String
 removePuncc xs = [x | x <- xs, not (x `elem` ",+?!:;-\\\"\'")]
 
 
---give ticker, sheet , term  returns url String
---ticker
-mwUrl::String->String->String->String
-mwUrl a "b" "q" = "https://www.marketwatch.com/investing/stock/" ++ a ++ "/financials/balance-sheet/quarter"
-mwUrl a "i" "q" = "https://www.marketwatch.com/investing/stock/" ++ a ++ "/financials/income/quarter"                                 
-mwUrl a "c" "q" = "https://www.marketwatch.com/investing/stock/" ++ a ++ "/financials/cash-flow/quarter"
-mwUrl a "b" _ = "https://www.marketwatch.com/investing/stock/" ++ a ++ "/financials/balance-sheet"
-mwUrl a "i" _ = "https://www.marketwatch.com/investing/stock/" ++ a ++ "/financials"                                 
-mwUrl a "c" _ = "https://www.marketwatch.com/investing/stock/" ++ a ++ "/financials/cash-flow"
-
 --cUrl
 
 cUrl::String
 cUrl = "https://coinmarketcap.com/"
 
 
----give ticker name and it returns url String
-yfUrl::String->String
-yfUrl a = "https://finance.yahoo.com/quote/" ++ a
-
-yfUrlStat::String->String
-yfUrlStat a = "https://finance.yahoo.com/quote/" ++ a ++ "/key-statistics?p="++ a
 
 
 get_tags :: String -> Int -> String
@@ -162,7 +146,7 @@ parseHtml a tick =
         change    = a=~("<change>(.*)</change>")::[[String]]
         dividend=  a=~ ("<dividend_yield>(.*)</dividend_yield>")::[[String]]
         marketCap =  a=~("<market_cap>(.*)</market_cap>")::[[String]]
-        afterHours =   a=~"\\(((-|\\+)?[0-9]+.[0-9]+)%\\)After hours"::[[String]]
+        afterHours =   a=~"<post_change>(.*)</post_change>"::[[String]]
         peRatio = a=~("<p_e_ratio>(.*)</p_e_ratio>")::[[String]]
         weeksChange = a=~("<week_52_range>(.*)</week_52_range>")::[[String]]
         beta        = a=~("<beta>(.*)</beta>")::[[String]]
@@ -197,7 +181,9 @@ getTicker :: String -> IO StockData
 getTicker tick  = do
   
   str1' <- download_raw_html ("http://127.0.0.1:9092/"++tick) 300000
-  case parseHtml (str1') tick of
+  str2' <- download_raw_html ("http://127.0.0.1:9093/"++tick) 300000
+  
+  case parseHtml (str1' ++ str2') tick of
     Nothing -> pure StockData{companyName ="" 
                        ,ticker = tick
                        ,price = ""
@@ -220,9 +206,9 @@ getTickerStat :: String -> IO StockData
 getTickerStat tick  = do
   
   str1'  <- download_raw_html ("http://127.0.0.1:9092/"++tick) 300000
+  str2'  <- download_raw_html ("http://127.0.0.1:9093/"++tick) 300000
 
-
-  case parseHtml ( str1') tick of
+  case parseHtml ( str1' ++ str2') tick of
     Nothing -> pure StockData{companyName ="" 
                        ,ticker = tick
                        ,price = ""
